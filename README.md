@@ -1,4 +1,4 @@
-# HomeKit Python
+# HomeKit Python [![Build Status](https://travis-ci.org/jlusiardi/homekit_python.svg?branch=master)](https://travis-ci.org/jlusiardi/homekit_python)
 
 With this code it is possible to implement either a HomeKit Accessory or simulate a
 HomeKit Controller.
