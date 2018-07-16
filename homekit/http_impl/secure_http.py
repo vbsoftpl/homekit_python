@@ -1,5 +1,3 @@
-# -*- coding: UTF-8 -*-
-
 #
 # Copyright 2018 Joachim Lusiardi
 #
@@ -17,9 +15,10 @@
 #
 
 import io
-import select
 import threading
+import select
 
+from homekit.http_impl.response import HttpResponse
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.http_impl import HttpContentTypes
 from homekit.http_impl import HttpResponse
@@ -76,6 +75,7 @@ class SecureHttp:
         headers = 'Content-Type: {ct}\n'.format(ct=content_type) + \
                   'Content-Length: {len}\n'.format(len=len(body))
         data = 'POST {tgt} HTTP/1.1\n{hdr}\n{body}'.format(tgt=target, hdr=headers, body=body)
+
         return self._handle_request(data)
 
     def _handle_request(self, data):
@@ -115,9 +115,9 @@ class SecureHttp:
             self.sock.setblocking(0)
             ready = select.select([self.sock], [], [], timeout)
             if not ready[0]:
-                #break
-                # TODO we disrespect the timeout here at the moment
-                continue
+                # TODO we disrespect the timeout here at the moment, perhaps only bail out while response is empty?
+                #continue
+                break
 
             self.sock.settimeout(0.1)
             data = self.sock.recv(exp_len)
@@ -166,5 +166,4 @@ class SecureHttp:
         This reads the enciphered response from an accessory after registering for events.
         :return: the event data as string (not as json object)
         """
-        # Must be 2 for the esp-homekits, they seem slow
         return self._read_response(1)

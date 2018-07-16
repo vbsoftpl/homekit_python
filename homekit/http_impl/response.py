@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-from homekit.http_impl.http_client import HomeKitHTTPConnection
-from homekit.exceptions import HttpException
-
 
 class HttpResponse(object):
     STATE_PRE_STATUS = 0
@@ -47,7 +44,7 @@ class HttpResponse(object):
                 # parse status line
                 line = line.split(b' ', 2)
                 if len(line) != 3:
-                    raise HttpException('Malformed status line.')
+                    raise HttpException()
                 self.version = line[0].decode()
                 self.code = int(line[1])
                 self.reason = line[2].decode()
@@ -87,8 +84,12 @@ class HttpResponse(object):
                 if self._content_length > -1:
                     self.body += self._raw_response
                     self._raw_response = bytearray()
+
+            elif self._state == HttpResponse.STATE_BODY:
+                raise HttpException
+
             else:
-                raise HttpException('Unknown parser state')
+                print('unknown state')
 
             pos = self._raw_response.find(b'\r\n')
 
@@ -96,6 +97,11 @@ class HttpResponse(object):
             self.body = self._raw_response
 
     def read(self):
+        """
+        Returns the body of the response.
+
+        :return: The read body or None if no body content was read yet
+        """
         return self.body
 
     def is_read_completly(self):
@@ -107,51 +113,20 @@ class HttpResponse(object):
             return len(self.body) == self._content_length
         if self._state == HttpResponse.STATE_PRE_STATUS or self._state == HttpResponse.STATE_HEADERS:
             return False
-        raise HttpException('Could not determine if HTTP data was read completely')
+        raise HttpException()
+
+    def get_http_name(self):
+        """
+        Returns the HTTP name (e.g. HTTP or EVENT).
+
+        :return: The name or None if the status line was not yet read
+        """
+        if self.version is not None:
+            return self.version.split('/')[0]
+        return None
 
 
-
-
-
-class _HttpContentTypes:
-    JSON = 'application/hap+json'
-    TLV = 'application/pairing+tlv8'
-
-
-class _HttpStatusCodes:
-    """
-    See Table 4-2 Chapter 4.15 Page 59
-    """
-    OK = 200
-    NO_CONTENT = 204
-    MULTI_STATUS = 207
-    BAD_REQUEST = 400
-    FORBIDDEN = 403
-    NOT_FOUND = 404
-    METHOD_NOT_ALLOWED = 405
-    TOO_MANY_REQUESTS = 429
-    CONNECTION_AUTHORIZATION_REQUIRED = 470
-    INTERNAL_SERVER_ERROR = 500
-
+class HttpException(Exception):
     def __init__(self):
-        self._codes = {
-            _HttpStatusCodes.OK: 'OK',
-            _HttpStatusCodes.NO_CONTENT: 'No Content',
-            _HttpStatusCodes.MULTI_STATUS: 'Multi-Status',
-            _HttpStatusCodes.BAD_REQUEST: 'Bad Request',
-            _HttpStatusCodes.METHOD_NOT_ALLOWED: 'Method Not Allowed',
-            _HttpStatusCodes.TOO_MANY_REQUESTS: 'Too Many Requests',
-            _HttpStatusCodes.CONNECTION_AUTHORIZATION_REQUIRED: 'Connection Authorization Required',
-            _HttpStatusCodes.INTERNAL_SERVER_ERROR: 'Internal Server Error'
-        }
-        self._categories_rev = {self._codes[k]: k for k in self._codes.keys()}
+        pass
 
-    def __getitem__(self, item):
-        if item in self._codes:
-            return self._codes[item]
-
-        raise KeyError('Item {item} not found'.format(item=item))
-
-
-HttpStatusCodes = _HttpStatusCodes()
-HttpContentTypes = _HttpContentTypes

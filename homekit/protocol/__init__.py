@@ -14,16 +14,17 @@
 # limitations under the License.
 #
 
-import hkdf
 import hashlib
 import ed25519
+import hkdf
 import py25519
 from binascii import hexlify
 from homekit.protocol.tlv import TLV
-from homekit.crypto.srp import SrpClient
-from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.exceptions import IncorrectPairingID, InvalidAuth, InvalidSignature, IllegalData, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
+
+import homekit.exceptions
+from homekit.crypto import chacha20_aead_decrypt, chacha20_aead_encrypt, SrpClient
 
 
 def error_handler(error, stage):
@@ -87,7 +88,6 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     assert TLV.kTLVType_State in response_tlv, response_tlv
     assert response_tlv[TLV.kTLVType_State] == TLV.M2
     if TLV.kTLVType_Error in response_tlv:
-        # evaluate the results of step #2
         error_handler(response_tlv[TLV.kTLVType_Error], "step 3")
 
     srp_client = SrpClient('Pair-Setup', pin)
@@ -177,7 +177,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     decrypted_data = chacha20_aead_decrypt(bytes(), session_key, 'PS-Msg06'.encode(), bytes([0, 0, 0, 0]),
                                            response_tlv[TLV.kTLVType_EncryptedData])
     if decrypted_data == False:
-        raise IllegalData("step 7")
+        raise homekit.exception.IllegalData("step 7")
 
     response_tlv = TLV.decode_bytearray(decrypted_data)
     assert TLV.kTLVType_Signature in response_tlv

@@ -57,6 +57,15 @@ E0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF'''), 16))
         self.username = None
         self.password = None
 
+    @staticmethod
+    def generate_private_key():
+        """
+        Static function to generate a 16 byte random key.
+
+        :return: the key as gmpy2 multi-precision integer
+        """
+        return gmpy2.mpz(int(binascii.hexlify(crypt.mksalt(crypt.METHOD_SHA512)[3:].encode()), 16))
+
     def _calculate_k(self) -> gmpy2.mpz:
         # calculate k (see https://tools.ietf.org/html/rfc5054#section-2.5.3)
         hash_instance = self.h()
@@ -118,7 +127,7 @@ class SrpClient(Srp):
         self.username = username
         self.password = password
         self.salt = None
-        self.a = gmpy2.mpz(int(binascii.hexlify(crypt.mksalt(crypt.METHOD_SHA512)[3:].encode()), 16))
+        self.a = self.generate_private_key()
         self.A = pow(self.g, self.a, self.n)
         self.B = None
 
@@ -201,17 +210,15 @@ class SrpServer(Srp):
         self.salt = SrpServer._create_salt()
         self.password = password
         self.verifier = self._get_verifier()
-        salt = crypt.mksalt(crypt.METHOD_SHA256)[3:].encode()
-        salt_b = binascii.hexlify(salt)
-        self.b = gmpy2.mpz(int(salt_b, 16))
+        self.b = self.generate_private_key()
         k = self._calculate_k()
         g_b = pow(self.g, self.b, self.n)
         self.B = (k * self.verifier + g_b) % self.n
-
         self.A = None
 
     @staticmethod
     def _create_salt() -> gmpy2.mpz:
+        # generate random salt
         salt = crypt.mksalt(crypt.METHOD_SHA512)[3:]
         salt_b = salt.encode()
         salt_hex = binascii.hexlify(salt_b)
@@ -280,28 +287,3 @@ class SrpServer(Srp):
         return gmpy2.mpz(binascii.hexlify(hash_instance.digest()), 16)
 
 
-if __name__ == '__main__':
-    # step M1
-
-    # step M2
-    setup_code = '123-45-678'  # transmitted on second channel
-    server = SrpServer('Pair-Setup', setup_code)
-    server_pub_key = server.get_public_key()
-    server_salt = server.get_salt()
-
-    # step M3
-    client = SrpClient('Pair-Setup', setup_code)
-    client.set_salt(server_salt)
-    client.set_server_public_key(server_pub_key)
-
-    client_pub_key = client.get_public_key()
-    clients_proof = client.get_proof()
-
-    # step M4
-    server.set_client_public_key(client_pub_key)
-    server_shared_secret = server.get_shared_secret()
-    assert server.verify_clients_proof(clients_proof)
-    servers_proof = server.get_proof(clients_proof)
-
-    # step M5
-    assert client.verify_servers_proof(servers_proof)

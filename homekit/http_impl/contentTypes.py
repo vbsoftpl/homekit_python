@@ -14,10 +14,13 @@
 # limitations under the License.
 #
 
-from tests.tlv_test import TestTLV
-from tests.srp_test import TestSrp
-from tests.chacha20poly1305_test import TestChacha20poly1305
-from tests.serverdata_test import TestServerData
-from tests.http_response_test import TestHttpResponse
-from tests.httpStatusCodes_test import TestHttpStatusCodes
-from tests.characteristicsTypes_test import TestCharacteristicsTypes
+
+class _HttpContentTypes:
+    """
+    Collection of HTTP content types as used in HTTP headers
+    """
+    JSON = 'application/hap+json'
+    TLV = 'application/pairing+tlv8'
+
+
+HttpContentTypes = _HttpContentTypes

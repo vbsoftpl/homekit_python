@@ -27,6 +27,10 @@ def setup_args_parser():
     parser.add_argument('-a', action='store', required=True, dest='alias', help='alias for the pairing')
     parser.add_argument('-c', action='append', required=True, dest='characteristics',
                         help='Use aid.iid value to change the value. Repeat to change multiple characteristics.')
+    parser.add_argument('-e', action='store', required=False, dest='eventCount', help='max number of events before end',
+                        default=-1, type=int)
+    parser.add_argument('-s', action='store', required=False, dest='secondsCount', default=-1, type=int,
+                        help='max number of seconds before end')
 
     return parser.parse_args()
 
@@ -45,5 +49,14 @@ if __name__ == '__main__':
         exit(-1)
 
     pairing = controller.get_pairings()[args.alias]
-    characteristics = [(int(c.split('.')[0]),int(c.split('.')[1])) for c in args.characteristics]
-    print(pairing.get_events(characteristics, func))
+    characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
+    results = pairing.get_events(characteristics, func, max_events=args.eventCount, max_seconds=args.secondsCount)
+    for key, value in results.items():
+        aid = key[0]
+        iid = key[1]
+        status = value['status']
+        desc = value['description']
+        if status < 0:
+            print('put_characteristics failed on {aid}.{iid} because: {reason} ({code})'.format(aid=aid, iid=iid,
+                                                                                                reason=desc,
+                                                                                                code=status))

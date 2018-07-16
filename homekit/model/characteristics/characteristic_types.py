@@ -21,6 +21,7 @@ class _CharacteristicsTypes(object):
     E.g:
         "6D" becomes "0000006D-0000-1000-8000-0026BB765291" and translates to
         "public.hap.characteristic.position.current" or "position.current"
+    Data is taken from chapter 8 of the specification (page 144ff)
     """
     ACCESSORY_PROPERTIES = 'A6'
     ACTIVE = 'B0'
@@ -249,14 +250,16 @@ class _CharacteristicsTypes(object):
         if item in self._characteristics_rev:
             return self._characteristics_rev[item]
 
-        # raise KeyError('Item {item} not found'.format_map(item=item))
-        return 'Unknown Characteristic {i}?'.format(i=item)
+        # https://docs.python.org/3.5/reference/datamodel.html#object.__getitem__ say, KeyError should be raised
+        raise KeyError('Unknown Characteristic {i}?'.format(i=item))
 
     def get_short(self, uuid: str):
         """
         Returns the short type for a given UUID. That means that "0000006D-0000-1000-8000-0026BB765291" and "6D" both
         translates to "position.current" (after looking up "public.hap.characteristic.position.current").
 
+        if item in self._characteristics:
+            return self._characteristics[item].split('.', 3)[3]
         :param uuid: the UUID in long form or the shortened version as defined in chapter 5.6.1 page 72.
         :return: the textual representation
         """
@@ -268,22 +271,23 @@ class _CharacteristicsTypes(object):
         if uuid in self._characteristics:
             return self._characteristics[uuid].split('.', maxsplit=3)[3]
 
-        return 'Unknown Characteristic {i}?'.format(i=orig_item)
+        return 'Unknown Characteristic {i}'.format(i=orig_item)
 
     def get_uuid(self, item_name):
         """
-        Returns the full length UUID for a characteristic.
+        Returns the full length UUID for either a shorted UUID or textual characteristic type name. For information on full and
+        short UUID consult chapter 5.6.1 page 72 of the specification.
 
-        :param item_name: either a full length textual description (e.g. "public.hap.characteristic.position.current")
-            or a short version of the UUID
-        :return: the full length UUID (e.g. "0000006D-0000-1000-8000-0026BB765291")
+        :param item_name: either the type name (e.g. "public.hap.characteristic.position.current") or the short UUID.
+        :return: the full UUID (e.g. "0000006D-0000-1000-8000-0026BB765291")
+        :raises KeyError: if the input is neither a short UUID nor a type name. Specific error is given in the message.
         """
         if item_name in self._characteristics_rev:
             short = self._characteristics_rev[item_name]
         elif item_name in self._characteristics:
             short = item_name
         else:
-            return item_name
+            raise KeyError('No UUID found for Item {item} found'.format(item=item_name))
         medium = '0' * (8 - len(short)) + short
         long = medium + self.baseUUID
         return long

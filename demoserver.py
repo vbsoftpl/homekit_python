@@ -18,6 +18,7 @@
 
 import os.path
 import logging
+import argparse
 
 from homekit import AccessoryServer
 from homekit.model import Accessory
@@ -28,16 +29,25 @@ def light_switched(new_value):
     print('=======>  light switched: {x}'.format(x=new_value))
 
 
+def setup_args_parser():
+    parser = argparse.ArgumentParser(description='HomeKit demo server')
+    parser.add_argument('-f', action='store', required=False, dest='file', default='./demoserver.json',
+                        help='File with the config data (defaults to ./demoserver.json)')
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
+    args = setup_args_parser()
+
     # setup logger
     logger = logging.getLogger('accessory')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(ch)
     logger.info('starting')
 
-    config_file = os.path.expanduser('~/.homekit/demoserver.json')
+    config_file = os.path.expanduser(args.file)
 
     # create a server and an accessory an run it unless ctrl+c was hit
     try:

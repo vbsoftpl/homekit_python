@@ -266,10 +266,10 @@ class Pairing(object):
         """
         if not self.session:
             self.session = Session(self.pairing_data)
-        request_tlv = TLV.encode_dict({
-            TLV.kTLVType_State: TLV.M1,
-            TLV.kTLVType_Method: TLV.ListPairings
-        })
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.ListPairings)
+        ])
         response = self.session.sec_http.post('/pairings', request_tlv.decode())
         data = response.read()
         data = TLV.decode_bytes_to_list(data)
@@ -357,8 +357,7 @@ class Pairing(object):
 
         :param characteristics: a list of 3-tupels of accessory id, instance id and the value
         :param do_conversion: select if conversion is done (False is default)
-        :return: a list of 3-tupels of accessory id, instance id and status for all characteristics that could not be
-                 written successfully. The status values can be looked up in HapStatusCodes.
+        :return: a dict from (aid, iid) onto {status, description}
         """
         if not self.session:
             self.session = Session(self.pairing_data)
@@ -391,7 +390,7 @@ class Pairing(object):
             data = {(d['aid'], d['iid']): {'status': d['status'], 'description': HapStatusCodes[d['status']]} for d in
                     data}
             return data
-        return []
+        return {}
 
     def get_events(self, characteristics, callback_fun, max_events=-1, max_seconds=-1):
         """
@@ -425,12 +424,10 @@ class Pairing(object):
             data.append({'aid': aid, 'iid': iid, 'ev': True})
         data = json.dumps({'characteristics': data})
         response = self.session.put('/characteristics', data)
-
         # handle error responses
         if response.code != 204:
             tmp = {}
             data = json.loads(response.read().decode())
-            print(data)
             for characteristic in data['characteristics']:
                 status = characteristic['status']
                 if status == 0:

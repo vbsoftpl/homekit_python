@@ -35,7 +35,7 @@ from homekit.exceptions import HomeKitStatusException
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.crypto.srp import SrpServer
 
-from homekit.exceptions import HomeKitConfigurationException, ConfigLoadingException, ConfigSavingException
+from homekit.exceptions import ConfigurationException, ConfigLoadingException, ConfigSavingException
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
 from homekit.protocol import TLV
@@ -59,7 +59,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
             self.logger = logger
         else:
-            raise HomeKitConfigurationException('Invalid logger given.')
+            raise ConfigurationException('Invalid logger given.')
 
         self.data = AccessoryServerData(config_file)
         self.data.increase_configuration_number()
@@ -136,10 +136,10 @@ class AccessoryServerData:
             with open(self.data_file, 'w') as output_file:
                 json.dump(self.data, output_file, indent=2, sort_keys=True)
         except PermissionError as e:
-            raise ConfigSavingException('Could not write "{f}" due to missing permissions'.format(f=filename))
+            raise ConfigSavingException('Could not write "{f}" due to missing permissions'.format(f=self.data_file))
         except FileNotFoundError as e:
             raise ConfigSavingException(
-                'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
+                'Could not write "{f}" because it (or the folder) does not exist'.format(f=self.data_file))
 
     @property
     def ip(self) -> str:
@@ -178,9 +178,9 @@ class AccessoryServerData:
         try:
             category = self.data['category']
         except KeyError:
-            raise HomeKitConfigurationException('category missing in "{f}"'.format(f=self.data_file))
+            raise ConfigurationException('category missing in "{f}"'.format(f=self.data_file))
         if category not in Categories:
-            raise HomeKitConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+            raise ConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
         return category
 
     def remove_peer(self, pairing_id: bytes):
@@ -243,7 +243,7 @@ class AccessoryServerData:
             required_fields.extend(['accessory_ltpk', 'accessory_ltsk', 'peers', 'unsuccessful_tries'])
         for f in required_fields:
             if f not in self.data:
-                raise HomeKitConfigurationException(
+                raise ConfigurationException(
                     '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
 
 

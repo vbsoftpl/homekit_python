@@ -4,7 +4,6 @@
   "c#": 1,
   "host_ip": "192.168.178.21",
   "host_port": 12345,
-  "name": "test_accessory",
   "peers": {},
   "unsuccessful_tries": 0,
   "name": "integrationtest",
