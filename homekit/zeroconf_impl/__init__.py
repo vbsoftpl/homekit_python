@@ -83,15 +83,24 @@ def discover_homekit_devices(max_seconds=10):
     return tmp
 
 
-def find_device_ip_and_port(device_id: str):
+def find_device_ip_and_port(device_id: str, max_seconds=10):
+    """
+    Try to find a HomeKit Accessory via Bonjour. The process is time boxed by the second parameter which sets an upper
+    limit of `max_seconds` before it times out. The runtime of the function may be longer because of the Bonjour handling
+    code.
+
+    :param device_id: the Accessory's pairing id
+    :param max_seconds: the number of seconds to wait for the accessory to be found
+    :return: a dict with ip and port if the accessory was found or None
+    """
     result = None
     zeroconf = Zeroconf()
     listener = CollectingListener()
     ServiceBrowser(zeroconf, '_hap._tcp.local.', listener)
     counter = 0
 
-    while result is None and counter < 10:
-        sleep(2)
+    while result is None and counter < max_seconds:
+        sleep(1)
         data = listener.get_data()
         for info in data:
             if info.properties[b'id'].decode() == device_id:
