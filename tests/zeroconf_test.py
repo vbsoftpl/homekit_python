@@ -71,4 +71,7 @@ class TestZeroconf(unittest.TestCase):
             if device_found:
                 test_device = device
                 break
+
+        zeroconf.unregister_all_services()
+
         self.assertIsNotNone(test_device)
