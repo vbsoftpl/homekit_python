@@ -47,24 +47,32 @@ def discover_homekit_devices(max_seconds=10):
     sleep(max_seconds)
     tmp = []
     for info in listener.get_data():
-        d = {}
-        tmp.append(d)
-
         # from Bonjour discovery
-        d['name'] = info.name
-        d['address'] = inet_ntoa(info.address)
-        d['port'] = info.port
+        d = {
+            'name': info.name,
+            'address': inet_ntoa(info.address),
+            'port': info.port
+        }
 
         # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
-        flags = int(info.properties[b'ff'].decode())
-        category = int(info.properties[b'ci'].decode())
+
+        if b'c#' not in info.properties:
+            continue
         d['c#'] = info.properties[b'c#'].decode()
 
+        if b'ff' not in info.properties:
+            flags = 0
+        else:
+            flags = int(info.properties[b'ff'].decode())
         d['ff'] = flags
         d['flags'] = FeatureFlags[flags]
 
+        if b'id' not in info.properties:
+            continue
         d['id'] = info.properties[b'id'].decode()
 
+        if b'md' not in info.properties:
+            continue
         d['md'] = info.properties[b'md'].decode()
 
         if b'pv' in info.properties:
@@ -72,12 +80,23 @@ def discover_homekit_devices(max_seconds=10):
         else:
             d['pv'] = '1.0'
 
+        if b's#' not in info.properties:
+            continue
         d['s#'] = info.properties[b's#'].decode()
 
-        d['sf'] = info.properties[b'sf'].decode()
+        if b'sf' not in info.properties:
+            d['sf'] = 0
+        else:
+            d['sf'] = info.properties[b'sf'].decode()
 
+        if b'ci' not in info.properties:
+            continue
+        category = info.properties[b'ci'].decode()
         d['ci'] = category
-        d['category'] = Categories[category]
+        d['category'] = Categories[int(category)]
+
+        # append device, it has all data
+        tmp.append(d)
 
     zeroconf.close()
     return tmp
