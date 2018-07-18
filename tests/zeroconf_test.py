@@ -19,7 +19,7 @@ from zeroconf import Zeroconf, ServiceInfo
 import socket
 
 
-from homekit.zeroconf_impl import find_device_ip_and_port
+from homekit.zeroconf_impl import find_device_ip_and_port, discover_homekit_devices
 
 
 class TestZeroconf(unittest.TestCase):
@@ -41,3 +41,11 @@ class TestZeroconf(unittest.TestCase):
         zeroconf.unregister_all_services()
 
         self.assertIsNotNone(result)
+
+    def test_discover_homekit_devices_nothing_found(self):
+        """
+        This test will fail if you have any HomeKit Accessory on your network. 
+        :return:
+        """
+        result = discover_homekit_devices()
+        self.assertEqual(len(result), 0)
