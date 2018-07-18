@@ -42,14 +42,6 @@ class TestZeroconf(unittest.TestCase):
 
         self.assertIsNotNone(result)
 
-    def test_discover_homekit_devices_nothing_found(self):
-        """
-        This test will fail if you have any HomeKit Accessory on your network.
-        :return:
-        """
-        result = discover_homekit_devices()
-        self.assertEqual(len(result), 0)
-
     def test_discover_homekit_devices(self):
         zeroconf = Zeroconf()
         desc = {'c#': '1', 'id': '00:00:01:00:00:02', 'md': 'unittest', 's#': '1', 'ci': '5'}
