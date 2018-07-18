@@ -24,23 +24,38 @@ from homekit.model.feature_flags import FeatureFlags
 
 
 class CollectingListener(object):
+    """
+    Helper class to collect all zeroconf announcements.
+    """
     def __init__(self):
         self.data = []
 
-    def remove_service(self, zeroconf, type, name):
+    def remove_service(self, zeroconf, zeroconf_type, name):
         # this is ignored since not interested in disappearing stuff
         pass
 
-    def add_service(self, zeroconf, type, name):
-        info = zeroconf.get_service_info(type, name)
+    def add_service(self, zeroconf, zeroconf_type, name):
+        info = zeroconf.get_service_info(zeroconf_type, name)
         if info is not None:
             self.data.append(info)
 
     def get_data(self):
+        """
+        Use this method to get the data of the collected announcements.
+
+        :return: a List of zeroconf.ServiceInfo instances
+        """
         return self.data
 
 
 def discover_homekit_devices(max_seconds=10):
+    """
+    This method discovers all HomeKit Accessories. It browses for devices in the _hap._tcp.local. domain and checks if
+    all required fields are set in the text record. It one field is missing, it will be excluded from the result list.
+
+    :param max_seconds: the number of seconds we will wait for the devices to be discovered
+    :return: a list of dicts containing all fields as described in table 5.7 page 69
+    """
     zeroconf = Zeroconf()
     listener = CollectingListener()
     ServiceBrowser(zeroconf, '_hap._tcp.local.', listener)
