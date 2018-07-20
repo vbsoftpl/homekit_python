@@ -2,7 +2,17 @@
 
 !include overview.puml
 
+
 hide model
 hide AccessoryServer
 hide exceptions
+hide homekit.discover
+hide homekit.pair
+hide homekit.unpair
+hide homekit.get_events
+hide homekit.get_accessories
+hide homekit.get_characteristics
+hide homekit.put_characteristics
+hide homekit.list_pairings
+
 @enduml

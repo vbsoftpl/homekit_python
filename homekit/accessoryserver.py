@@ -35,7 +35,7 @@ from homekit.exceptions import HomeKitStatusException
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.crypto.srp import SrpServer
 
-from homekit.exceptions import ConfigurationException, ConfigLoadingException, ConfigSavingException
+from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
 from homekit.protocol import TLV
@@ -59,7 +59,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         if logger is None or logger == sys.stderr or isinstance(logger, logging.Logger):
             self.logger = logger
         else:
-            raise ConfigurationException('Invalid logger given.')
+            raise ConfigurationError('Invalid logger given.')
 
         self.data = AccessoryServerData(config_file)
         self.data.increase_configuration_number()
@@ -90,6 +90,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         if self.data.is_paired:
             desc['sf'] = '0'
 
+        # TODO what does this 'ash-2.local.' mean?
         info = ServiceInfo(self.mdns_type, self.mdns_name, socket.inet_aton(self.data.ip), self.data.port, 0, 0, desc,
                            'ash-2.local.')
         self.zeroconf.unregister_all_services()
@@ -117,11 +118,11 @@ class AccessoryServerData:
             with open(data_file, 'r') as input_file:
                 self.data = json.load(input_file)
         except PermissionError as e:
-            raise ConfigLoadingException('Could not open "{f}" due to missing permissions'.format(f=input_file))
+            raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=input_file))
         except JSONDecodeError as e:
-            raise ConfigLoadingException('Cannot parse "{f}" as JSON file'.format(f=input_file))
+            raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=input_file))
         except FileNotFoundError as e:
-            raise ConfigLoadingException('Could not open "{f}" because it does not exist'.format(f=input_file))
+            raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=input_file))
 
         self.check()
 
@@ -136,9 +137,9 @@ class AccessoryServerData:
             with open(self.data_file, 'w') as output_file:
                 json.dump(self.data, output_file, indent=2, sort_keys=True)
         except PermissionError as e:
-            raise ConfigSavingException('Could not write "{f}" due to missing permissions'.format(f=self.data_file))
+            raise ConfigSavingError('Could not write "{f}" due to missing permissions'.format(f=self.data_file))
         except FileNotFoundError as e:
-            raise ConfigSavingException(
+            raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=self.data_file))
 
     @property
@@ -178,9 +179,9 @@ class AccessoryServerData:
         try:
             category = self.data['category']
         except KeyError:
-            raise ConfigurationException('category missing in "{f}"'.format(f=self.data_file))
+            raise ConfigurationError('category missing in "{f}"'.format(f=self.data_file))
         if category not in Categories:
-            raise ConfigurationException('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
+            raise ConfigurationError('invalid category "{c}" in "{f}"'.format(c=category, f=self.data_file))
         return category
 
     def remove_peer(self, pairing_id: bytes):
@@ -243,7 +244,7 @@ class AccessoryServerData:
             required_fields.extend(['accessory_ltpk', 'accessory_ltsk', 'peers', 'unsuccessful_tries'])
         for f in required_fields:
             if f not in self.data:
-                raise ConfigurationException(
+                raise ConfigurationError(
                     '"{r}" is missing in the config file "{f}"!'.format(r=f, f=self.data_file))
 
 
@@ -757,12 +758,13 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 3) pairing exists?
             registered_controller_LTPK = server_data.get_peer_key(additional_controller_pairing_identifier)
+
             if registered_controller_LTPK is not None:
-                self.log_message('controller was registered!')
+                self.log_message('controller is already registered!')
                 if registered_controller_LTPK != additional_controller_LTPK:
                     self.log_message('with different key')
                     # 3.a)
-                    d_res[TLV.kTLVType_Error] = TLV.kTLVError_Authentication
+                    d_res[TLV.kTLVType_Error] = TLV.kTLVError_Unknown
                     self._send_response_tlv(d_res)
                 else:
                     self.log_message('with different permissions')
@@ -773,7 +775,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
                 # 4) no pairing exists
                 # 4.a) no limit applied to number of pairings
-                # 4.b) add pairing
+                # 4.b) add pairing (could raise kTLVError_Unknown)
                 server_data.add_peer(additional_controller_pairing_identifier, additional_controller_LTPK, is_admin)
 
             self.log_message('after step #2\n%s', TLV.to_string(d_res))

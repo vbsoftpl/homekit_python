@@ -10,6 +10,10 @@ package homekit {
         + serve_forever()
     }
     package model {
+        class FeatureFlags
+
+        class Categories
+
         package services {
             note as n1
                 This package contains all
@@ -92,18 +96,25 @@ package homekit {
 
     package exceptions {
         class HomeKitException
-        FormatException -up-|> HomeKitException
+        FormatError -up-|> HomeKitException
         class AuthenticationError
         AuthenticationError -up-|> HomeKitException
-        class AccessoryNotFoundException
+        AccessoryNotFoundError -up-|> HomeKitException
         class UnknownError
-        class ConfigSavingException
-        ConfigSavingException -up-|> HomeKitException
-        class ConfigLoadingException
-        ConfigLoadingException -up-|> HomeKitException
-        class AlreadyPairedException
+        class ConfigSavingError
+        ConfigSavingError -up-|> HomeKitException
+        class ConfigLoadingError
+        ConfigLoadingError -up-|> HomeKitException
+        AlreadyPairedError -up-|> HomeKitException
         class HomeKitConfigurationException
         HttpException -up-|> HomeKitException
+        ' IllegalDataError -up-|> HomeKitException
+        UnpairedError -up-|> HomeKitException
+        CharacteristicPermissionError -up-|> HomeKitException
+        ConfigurationError -up-|> HomeKitException
+        InvalidSignatureError -up-|> HomeKitException
+        IncorrectPairingIdError -up-|> HomeKitException
+        InvalidAuthTagError -up-|> HomeKitException
     }
 }
 
@@ -118,18 +129,18 @@ class homekit.Pairing {
 
 class homekit.Controller {
     + __init__(self, data)
-    + get_pairings()
+    + {static}discover(max_seconds=10)
+    + {static}identify(accessory_id)
     + load_data(filename)
+    + save_data(filename)
+    + get_pairings()
     + perform_pairing(alias, accessory_id, pin)
     + remove_pairing(alias)
-    + save_data(filename)
-    + {static}discover(max_seconds)
-    + {static}identify(accessory_id)
 }
 
 
 
-homekit.Pairing "*" <-down- "1" homekit.Controller
+homekit.Pairing "*" <-down- "1" homekit.Controller : pairings
 
 
 class homekit.discover <<(E,#FF7700) executable>> {
@@ -214,10 +225,10 @@ class homekit.Session {
     package exceptions {
         class AuthenticationError
         class HomeKitTypeException
-        class AccessoryNotFoundException
+        class AccessoryNotFoundError
         class UnknownError
-        class ConfigSavingException
-        class AlreadyPairedException
+        class ConfigSavingError
+        class AlreadyPairedError
         class HomeKitConfigurationException
     }
 

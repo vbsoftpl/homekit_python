@@ -22,7 +22,7 @@ from decimal import Decimal
 from homekit.model.mixin import ToDictMixin
 from homekit.model.characteristics import CharacteristicsTypes, CharacteristicFormats, CharacteristicPermissions
 from homekit.protocol.statuscodes import HapStatusCodes
-from homekit.exceptions import HomeKitStatusException, PermissionException
+from homekit.exceptions import HomeKitStatusException, CharacteristicPermissionError
 
 
 class AbstractCharacteristic(ToDictMixin):
@@ -63,10 +63,10 @@ class AbstractCharacteristic(ToDictMixin):
         This function sets the value of this characteristic. Permissions are checked first
 
         :param new_val:
-        :raises PermissionException: if the characteristic cannot be read
+        :raises CharacteristicPermissionError: if the characteristic cannot be written
         """
         if CharacteristicPermissions.paired_write not in self.perms:
-            raise PermissionException(HapStatusCodes.CANT_READ_WRITE_ONLY)
+            raise CharacteristicPermissionError(HapStatusCodes.CANT_WRITE_READ_ONLY)
         try:
             # convert input to python int if it is any kind of int
             if self.format in [CharacteristicFormats.uint64, CharacteristicFormats.uint32, CharacteristicFormats.uint16,
@@ -127,11 +127,11 @@ class AbstractCharacteristic(ToDictMixin):
         for getting the values is executed (execution time may vary) or the value is directly returned if not callback
         is given.
 
-        :raises PermissionException: if the characteristic cannot be read
+        :raises CharacteristicPermissionError: if the characteristic cannot be read
         :return: the value of the characteristic
         """
         if CharacteristicPermissions.paired_read not in self.perms:
-            raise HomeKitStatusException(HapStatusCodes.CANT_READ_WRITE_ONLY)
+            raise CharacteristicPermissionError(HapStatusCodes.CANT_READ_WRITE_ONLY)
         if self._get_value_callback:
             return self._get_value_callback()
         return self.value

@@ -14,5 +14,16 @@ hide homekit.get_characteristics
 hide homekit.put_characteristics
 hide homekit.get_accessories
 hide exceptions
+hide Categories
+hide FeatureFlags
+hide LightBulbService
+hide AccessoryInformationService
+hide NameCharacteristic
+hide OnCharacteristic
+hide OnCharacteristicMixin
 
+hide AbstractCharacteristic fields
+hide AbstractService fields
+hide Accessory fields
+hide AccessoryServer fields
 @enduml

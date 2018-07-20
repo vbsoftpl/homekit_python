@@ -20,7 +20,7 @@ import hkdf
 import py25519
 from binascii import hexlify
 from homekit.protocol.tlv import TLV
-from homekit.exceptions import IncorrectPairingID, InvalidAuth, InvalidSignature, IllegalData, UnavailableError, \
+from homekit.exceptions import IncorrectPairingIdError, InvalidAuthTagError, InvalidSignatureError, UnavailableError, \
     AuthenticationError, InvalidError, BusyError, MaxTriesError, MaxPeersError, BackoffError
 
 import homekit.exceptions
@@ -196,7 +196,10 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     accessory_info = accessory_x + accessory_pairing_id + accessory_ltpk
 
     e25519s = ed25519.VerifyingKey(bytes(response_tlv[TLV.kTLVType_PublicKey]))
-    e25519s.verify(bytes(accessory_sig), bytes(accessory_info))
+    try:
+        e25519s.verify(bytes(accessory_sig), bytes(accessory_info))
+    except AssertionError:
+        raise InvalidSignatureError('step #7')
 
     return {
         'AccessoryPairingID': response_tlv[TLV.kTLVType_Identifier].decode(),
@@ -209,14 +212,14 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
 
 def get_session_keys(conn, pairing_data):
     """
-    Performs a pair verify operation as described in chapter 4.8 page 47 ff.
+    HomeKit Controller side call to perform a pair verify operation as described in chapter 4.8 page 47 ff.
 
     :param conn: the http_impl connection to the target accessory
     :param pairing_data: the paring data as returned by perform_pair_setup
     :return: tuple of the session keys (controller_to_accessory_key and  accessory_to_controller_key)
-    :raises InvalidAuth: if the auth tag could not be verified,
-    :raises IncorrectPairingID: if the accessory's LTPK could not be found
-    :raises InvalidSignature: if the accessory's signature could not be verified
+    :raises InvalidAuthTagError: if the auth tag could not be verified,
+    :raises IncorrectPairingIdError: if the accessory's LTPK could not be found
+    :raises InvalidSignatureError: if the accessory's signature could not be verified
     :raises AuthenticationError: if the secured session could not be established
     """
     headers = {
@@ -258,8 +261,8 @@ def get_session_keys(conn, pairing_data):
     encrypted = response_tlv[TLV.kTLVType_EncryptedData]
     decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg02'.encode(), bytes([0, 0, 0, 0]),
                                       encrypted)
-    if decrypted == False:
-        raise InvalidAuth("step 3")
+    if type(decrypted) == bool and not decrypted:
+        raise InvalidAuthTagError("step 3")
     d1 = TLV.decode_bytes(decrypted)
     assert TLV.kTLVType_Identifier in d1
     assert TLV.kTLVType_Signature in d1
@@ -268,7 +271,7 @@ def get_session_keys(conn, pairing_data):
     accessory_name = d1[TLV.kTLVType_Identifier].decode()
 
     if pairing_data['AccessoryPairingID'] != accessory_name:
-        raise IncorrectPairingID("step 3")
+        raise IncorrectPairingIdError("step 3")
 
     accessory_ltpk = py25519.Key25519(pubkey=bytes(), verifyingkey=bytes.fromhex(pairing_data['AccessoryLTPK']))
 
@@ -277,7 +280,7 @@ def get_session_keys(conn, pairing_data):
     accessory_session_pub_key_bytes = response_tlv[TLV.kTLVType_PublicKey]
     accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key.pubkey
     if not accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info)):
-        raise InvalidSignature("step 3")
+        raise InvalidSignatureError("step 3")
 
     # 7) create iOSDeviceInfo
     ios_device_info = ios_key.pubkey + pairing_data['iOSPairingId'].encode() + accessorys_session_pub_key_bytes

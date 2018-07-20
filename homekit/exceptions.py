@@ -35,7 +35,10 @@ class HttpException(HomeKitException):
 
 
 class UnknownError(HomeKitException):
-    """Raised upon receipt of an unknown error"""
+    """
+    Raised upon receipt of an unknown error (transmission of kTLVError_Unknown). The spec says that this can happen
+    during "Add Pairing" (chapter 4.11 page 51) and "Remove Pairing" (chapter 4.12 page 53).
+    """
     pass
 
 
@@ -75,39 +78,48 @@ class InvalidError(HomeKitException):
 
 
 class IllegalData(HomeKitException):
-    """Raised upon receipt of invalid encrypted data"""
+    """
+    # TODO still required?
+    Raised upon receipt of invalid encrypted data"""
     pass
 
 
-class InvalidAuth(HomeKitException):
-    """Raised upon receipt of an invalid authtag"""
+class InvalidAuthTagError(HomeKitException):
+    """
+    Raised upon receipt of an invalid auth tag in Pair Verify Step 3.3 (Page 49).
+    """
     pass
 
 
-class IncorrectPairingID(HomeKitException):
-    """Raised upon a pairing response that doesn't match pairing data"""
+class IncorrectPairingIdError(HomeKitException):
+    """
+    Raised in Pair Verify Step 3.5 (Page 49) if the accessory responds with an unexpected pairing id.
+    """
     pass
 
 
-class InvalidSignature(HomeKitException):
-    """Raised upon receipt of an invalid signature from an accessory"""
+class InvalidSignatureError(HomeKitException):
+    """
+    Raised upon receipt of an invalid signature either from an accessory or from the controller.
+    """
     pass
 
 
 class HomeKitStatusException(Exception):
+    # TODO really needed?
     def __init__(self, status_code):
         self.status_code = status_code
 
 
-class ConfigurationException(Exception):
+class ConfigurationError(HomeKitException):
     """
-    Used if any configuration in the HomeKit context was wrong.
+    Used if any configuration in the HomeKit AccessoryServer's context was wrong.
     """
     def __init__(self, message):
         Exception.__init__(self, message)
 
 
-class FormatException(Exception):
+class FormatError(HomeKitException):
     """
     Used if any format conversion fails or is impossible.
     """
@@ -115,41 +127,54 @@ class FormatException(Exception):
         Exception.__init__(self, message)
 
 
-class PermissionException(Exception):
+class CharacteristicPermissionError(HomeKitException):
     """
-    Used if the characteristic's permissions do not allow the action
-    """
-    def __init__(self, message):
-        Exception.__init__(self, message)
-
-
-class AccessoryNotFoundException(HomeKitException):
-    def __init__(self, message):
-        Exception.__init__(self, message)
-
-
-class ConfigLoadingException(HomeKitException):
-    """
-    Used on problems loading some config.
+    Used if the characteristic's permissions do not allow the action. This includes reads on write only characteristics
+    and writes on read only characteristics.
     """
     def __init__(self, message):
         Exception.__init__(self, message)
 
 
-class ConfigSavingException(HomeKitException):
+class AccessoryNotFoundError(HomeKitException):
     """
-    Used on problems saving some config.
+    Used if a HomeKit Accessory's IP and port could not be received via Bonjour / Zeroconf. This might be a temporary
+    issue due to the way Bonjour / Zeroconf works.
     """
     def __init__(self, message):
         Exception.__init__(self, message)
 
 
-class UnpairedException(HomeKitException):
+class ConfigLoadingError(HomeKitException):
+    """
+    Used on problems loading some config. This includes but may not be limited to:
+     * problems with file permissions (file not readable)
+     * the file could not be found
+     * the file does not contain parseable JSON
+    """
     def __init__(self, message):
         Exception.__init__(self, message)
 
 
-class AlreadyPairedException(HomeKitException):
+class ConfigSavingError(HomeKitException):
+    """
+    Used on problems saving some config. This includes but may not be limited to:
+     * problems with file permissions (file not writable)
+     * the file could not be found (occurs if the path does not exist)
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class UnpairedError(HomeKitException):
+    """
+    This should be raised if a paired accessory is expected but the accessory is still unpaired.
+    """
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
+class AlreadyPairedError(HomeKitException):
     """
     This should be raised if an unpaired accessory is expected but the accessory is already paired.
     """

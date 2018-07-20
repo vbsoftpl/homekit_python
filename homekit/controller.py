@@ -25,8 +25,8 @@ import time
 from homekit.http_impl import HomeKitHTTPConnection, HttpContentTypes
 from homekit.zeroconf_impl import discover_homekit_devices, find_device_ip_and_port
 from homekit.protocol.statuscodes import HapStatusCodes
-from homekit.exceptions import AccessoryNotFoundException, ConfigLoadingException, UnknownError, UnpairedException, \
-    AuthenticationError, ConfigSavingException, AlreadyPairedException, FormatException
+from homekit.exceptions import AccessoryNotFoundError, ConfigLoadingError, UnknownError, UnpairedError, \
+    AuthenticationError, ConfigSavingError, AlreadyPairedError, FormatError
 from homekit.http_impl.secure_http import SecureHttp
 from homekit.protocol import get_session_keys, perform_pair_setup
 from homekit.protocol.tlv import TLV, TlvParseException
@@ -52,16 +52,20 @@ class Controller(object):
          * name: the Bonjour name of the HomeKit accessory (i.e. Testsensor1._hap._tcp.local.)
          * address: the IP address of the accessory
          * port: the used port
-         * c#: the configuration number
+         * c#: the configuration number (required)
          * ff / flags: the numerical and human readable version of the feature flags (supports pairing or not, see table
                        5-8 page 69)
-         * id: the accessory's pairing id
-         * md: the model name of the accessory
+         * id: the accessory's pairing id (required)
+         * md: the model name of the accessory (required)
          * pv: the protocol version
-         * s#: the current state number
+         * s#: the current state number (required)
          * sf: the status flag (see table 5-9 page 70)
          * ci/category: the category identifier in numerical and human readable form. For more information see table
-                        12-3 page 254 or homekit.Categories
+                        12-3 page 254 or homekit.Categories (required)
+
+        IMPORTANT:
+        This method will ignore all HomeKit accessories that exist in _hap._tcp domain but fail to have all required
+        TXT record keys set.
 
         :param max_seconds: how long should the Bonjour service browser do the discovery (default 10s). See sleep for
                             more details
@@ -72,19 +76,19 @@ class Controller(object):
     @staticmethod
     def identify(accessory_id):
         """
-        This call can be used to trigger the identification of a not yet paired accessory. A successful call should
-        cause the accessory to perform some specific action by which it can be distinguished from the others (blink a
+        This call can be used to trigger the identification of an accessory, that was not yet paired. A successful call
+        should cause the accessory to perform some specific action by which it can be distinguished from others (blink a
         LED for example).
 
         It uses the /identify url as described on page 88 of the spec.
 
         :param accessory_id: the accessory's pairing id (e.g. retrieved via discover)
-        :raises AccessoryNotFoundException: if the accessory could not be looked up via Bonjour
-        :raises AlreadyPairedException: if the accessory is already paired
+        :raises AccessoryNotFoundError: if the accessory could not be looked up via Bonjour
+        :raises AlreadyPairedError: if the accessory is already paired
         """
         connection_data = find_device_ip_and_port(accessory_id)
         if connection_data is None:
-            raise AccessoryNotFoundException('Cannot find accessory with id "{i}".'.format(i=accessory_id))
+            raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
 
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
         conn.request('POST', '/identify')
@@ -95,7 +99,7 @@ class Controller(object):
         if resp.code == 400:
             data = json.loads(resp.read().decode())
             code = data['status']
-            raise AlreadyPairedException(
+            raise AlreadyPairedError(
                 'identify failed because: {reason} ({code}).'.format(reason=HapStatusCodes[code],
                                                                      code=code))
         conn.close()
@@ -113,7 +117,7 @@ class Controller(object):
         Loads the pairing data of the controller from a file.
 
         :param filename: the file name of the pairing data
-        :raises ConfigLoadingException: if the config could not be loaded. The reason is given in the message.
+        :raises ConfigLoadingError: if the config could not be loaded. The reason is given in the message.
         """
         try:
             with open(filename, 'r') as input_fp:
@@ -121,18 +125,18 @@ class Controller(object):
                 for pairing_id in data:
                     self.pairings[pairing_id] = Pairing(data[pairing_id])
         except PermissionError as e:
-            raise ConfigLoadingException('Could not open "{f}" due to missing permissions'.format(f=filename))
+            raise ConfigLoadingError('Could not open "{f}" due to missing permissions'.format(f=filename))
         except JSONDecodeError as e:
-            raise ConfigLoadingException('Cannot parse "{f}" as JSON file'.format(f=filename))
+            raise ConfigLoadingError('Cannot parse "{f}" as JSON file'.format(f=filename))
         except FileNotFoundError as e:
-            raise ConfigLoadingException('Could not open "{f}" because it does not exist'.format(f=filename))
+            raise ConfigLoadingError('Could not open "{f}" because it does not exist'.format(f=filename))
 
     def save_data(self, filename):
         """
         Saves the pairing data of the controller to a file.
 
         :param filename: the file name of the pairing data
-        :raises ConfigSavingException: if the config could not be saved. The reason is given in the message.
+        :raises ConfigSavingError: if the config could not be saved. The reason is given in the message.
         """
         data = {}
         for pairing_id in self.pairings:
@@ -142,9 +146,9 @@ class Controller(object):
             with open(filename, 'w') as output_fp:
                 json.dump(data, output_fp, indent='  ')
         except PermissionError as e:
-            raise ConfigSavingException('Could not write "{f}" due to missing permissions'.format(f=filename))
+            raise ConfigSavingError('Could not write "{f}" due to missing permissions'.format(f=filename))
         except FileNotFoundError as e:
-            raise ConfigSavingException(
+            raise ConfigSavingError(
                 'Could not write "{f}" because it (or the folder) does not exist'.format(f=filename))
 
     def perform_pairing(self, alias, accessory_id, pin):
@@ -161,8 +165,8 @@ class Controller(object):
         :param alias: the alias for the accessory in the controllers data
         :param accessory_id: the accessory's id
         :param pin: the accessory's pin
-        :raises AccessoryNotFoundException: if no accessory with the given id can be found
-        :raises AlreadyPairedException: if the alias was already used
+        :raises AccessoryNotFoundError: if no accessory with the given id can be found
+        :raises AlreadyPairedError: if the alias was already used
         :raises UnavailableError: if the device is already paired
         :raises MaxTriesError: if the device received more than 100 unsuccessful attempts
         :raises BusyError: if a parallel pairing is ongoing
@@ -171,10 +175,10 @@ class Controller(object):
         :raises IllegalData: if the verification of the accessory's data fails
         """
         if alias in self.pairings:
-            raise AlreadyPairedException('Alias "{a}" is already paired.'.format(a=alias))
+            raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
         connection_data = find_device_ip_and_port(accessory_id)
         if connection_data is None:
-            raise AccessoryNotFoundException('Cannot find accessory with id "{i}".'.format(i=accessory_id))
+            raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
         pairing = perform_pair_setup(conn, pin, str(uuid.uuid4()))
         pairing['AccessoryIP'] = connection_data['ip']
@@ -191,7 +195,7 @@ class Controller(object):
 
         :param alias: the controller's alias for the accessory
         :raises AuthenticationError: if the controller isn't authenticated to the accessory.
-        :raises AccessoryNotFoundException: if the device can not be found via zeroconf
+        :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         :raises UnknownError: on unknown errors
         """
         # package visibility like in java would be nice here
@@ -275,9 +279,10 @@ class Pairing(object):
         data = TLV.decode_bytes_to_list(data)
 
         if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
+            # TODO should not be UnknownError since this is a specific error defined in the spec
             raise UnknownError('unexpected data received: ' + str(data))
         elif data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
-            raise UnpairedException('Must be paired')
+            raise UnpairedError('Must be paired')
         else:
             tmp = []
             r = {}
@@ -489,7 +494,7 @@ class Session(object):
         """
 
         :param pairing_data:
-        :raises AccessoryNotFoundException: if the device can not be found via zeroconf
+        :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         """
         connected = False
         if 'AccessoryIP' in pairing_data and 'AccessoryPort' in pairing_data:
@@ -508,7 +513,7 @@ class Session(object):
             device_id = pairing_data['AccessoryPairingID']
             connection_data = find_device_ip_and_port(device_id)
             if connection_data is None:
-                raise AccessoryNotFoundException(
+                raise AccessoryNotFoundError(
                     'Device {id} not found'.format(id=pairing_data['AccessoryPairingID']))
             conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
             pairing_data['AccessoryIP'] = connection_data['ip']
@@ -572,28 +577,28 @@ def check_convert_value(val, target_type):
         try:
             val = strtobool(str(val))
         except ValueError:
-            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type in [CharacteristicFormats.uint64, CharacteristicFormats.uint32,
                        CharacteristicFormats.uint16, CharacteristicFormats.uint8,
                        CharacteristicFormats.int]:
         try:
             val = int(val)
         except ValueError:
-            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.float:
         try:
             val = float(val)
         except ValueError:
-            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.data:
         try:
             base64.decodebytes(val.encode())
         except binascii.Error:
-            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     if target_type == CharacteristicFormats.tlv8:
         try:
             tmp_bytes = base64.decodebytes(val.encode())
             TLV.decode_bytes(tmp_bytes)
         except (binascii.Error, TlvParseException):
-            raise FormatException('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
+            raise FormatError('"{v}" is no valid "{t}"!'.format(v=val, t=target_type))
     return val

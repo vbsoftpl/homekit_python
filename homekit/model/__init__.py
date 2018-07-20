@@ -19,6 +19,7 @@ from homekit.model.services import AccessoryInformationService, LightBulbService
     BHSLightBulbService, ThermostatService
 from homekit.model.categories import Categories
 from homekit.model.characteristics import CharacteristicPermissions, CharacteristicFormats
+from homekit.model.feature_flags import FeatureFlags
 
 
 class Accessory(ToDictMixin):
