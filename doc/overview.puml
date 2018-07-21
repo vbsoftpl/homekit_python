@@ -96,25 +96,29 @@ package homekit {
 
     package exceptions {
         class HomeKitException
-        FormatError -up-|> HomeKitException
-        class AuthenticationError
-        AuthenticationError -up-|> HomeKitException
-        AccessoryNotFoundError -up-|> HomeKitException
-        class UnknownError
-        class ConfigSavingError
-        ConfigSavingError -up-|> HomeKitException
-        class ConfigLoadingError
-        ConfigLoadingError -up-|> HomeKitException
-        AlreadyPairedError -up-|> HomeKitException
-        class HomeKitConfigurationException
+        ProtocolError -up-|> HomeKitException
+        BusyError -up-|> ProtocolError
+        UnknownError -up-|> ProtocolError
+        MaxTriesError -up-|> ProtocolError
+        UnavailableError -up-|> ProtocolError
+        MaxPeersError -up-|> ProtocolError
+        BackoffError -up-|> ProtocolError
+        AuthenticationError -up-|> ProtocolError
+        InvalidError -up-|> ProtocolError
+        InvalidSignatureError -up-|> ProtocolError
+        IncorrectPairingIdError -up-|> ProtocolError
+        InvalidAuthTagError -up-|> ProtocolError
+
         HttpException -up-|> HomeKitException
-        ' IllegalDataError -up-|> HomeKitException
-        UnpairedError -up-|> HomeKitException
-        CharacteristicPermissionError -up-|> HomeKitException
+
         ConfigurationError -up-|> HomeKitException
-        InvalidSignatureError -up-|> HomeKitException
-        IncorrectPairingIdError -up-|> HomeKitException
-        InvalidAuthTagError -up-|> HomeKitException
+        FormatError -up-|> HomeKitException
+        CharacteristicPermissionError -up-|> HomeKitException
+        AccessoryNotFoundError -up-|> HomeKitException
+        ConfigSavingError -up-|> HomeKitException
+        ConfigLoadingError -up-|> HomeKitException
+        UnpairedError -up-|> HomeKitException
+        AlreadyPairedError -up-|> HomeKitException
     }
 }
 

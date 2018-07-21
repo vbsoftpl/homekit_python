@@ -31,11 +31,10 @@ import socket
 import sys
 import logging
 
-from homekit.exceptions import HomeKitStatusException
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.crypto.srp import SrpServer
 
-from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError
+from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError, FormatError
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
 from homekit.protocol import TLV
@@ -46,6 +45,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
     """
     This server makes accessories accessible via the HomeKit protocol.
     """
+
     def __init__(self, config_file, logger=sys.stderr):
         """
         Create a new server that acts like a homekit accessory. The config file is loaded and checked.
@@ -481,8 +481,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                         try:
                             value = characteristic.get_value()
                             result['characteristics'].append({'aid': aid, 'iid': cid, 'value': value})
-                        except HomeKitStatusException as e:
-                            result['characteristics'].append({'aid': aid, 'iid': cid, 'status': e.status_code})
+                        except FormatError:
+                            result['characteristics'].append(
+                                {'aid': aid, 'iid': cid, 'status': HapStatusCodes.INVALID_VALUE})
                             errors += 1
                         except Exception as e:
                             self.log_error('Exception while getting value for %s.%s: %s', aid, cid, str(e))
@@ -546,7 +547,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                                 characteristic.set_events(characteristic_to_set['ev'])
                                 result['characteristics'].append({'aid': aid, 'iid': cid, 'status': 0})
                             else:
-                                result['characteristics'].append({'aid': aid, 'iid': cid, 'status': HapStatusCodes.NOTIFICATION_NOT_SUPPORTED})
+                                result['characteristics'].append(
+                                    {'aid': aid, 'iid': cid, 'status': HapStatusCodes.NOTIFICATION_NOT_SUPPORTED})
 
                         if 'value' in characteristic_to_set:
                             if AccessoryRequestHandler.DEBUG_PUT_CHARACTERISTICS:
@@ -554,8 +556,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                             try:
                                 characteristic.set_value(characteristic_to_set['value'])
                                 result['characteristics'].append({'aid': aid, 'iid': cid, 'status': 0})
-                            except HomeKitStatusException as e:
-                                result['characteristics'].append({'aid': aid, 'iid': cid, 'status': int(str(e))})
+                            except FormatError:
+                                result['characteristics'].append(
+                                    {'aid': aid, 'iid': cid, 'status': HapStatusCodes.INVALID_VALUE})
                                 errors += 1
                             except Exception as e:
                                 self.log_error('Exception while setting value for %s.%s: %s', aid, cid, str(e))
@@ -806,15 +809,15 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 6) + 7) invalidate HAP session and close connections
             # TODO implement this in more details
             # TODO remove prints
-#            for session_id in self.server.sessions:
-#                session = self.server.sessions[session_id]
-#                if session['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
-#                    print('closing', session['handler'])
-#                    session['handler'].close_connection = True
-#
-#                    print('closing', self.server.sessions[self.session_id]['handler'])
-#            if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
-#                self.close_connection = True
+            #            for session_id in self.server.sessions:
+            #                session = self.server.sessions[session_id]
+            #                if session['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+            #                    print('closing', session['handler'])
+            #                    session['handler'].close_connection = True
+            #
+            #                    print('closing', self.server.sessions[self.session_id]['handler'])
+            #            if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
+            #                self.close_connection = True
             return
 
         if d_req[TLV.kTLVType_State] == TLV.M1 and d_req[TLV.kTLVType_Method] == TLV.ListPairings:

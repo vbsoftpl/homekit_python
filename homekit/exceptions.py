@@ -27,14 +27,15 @@ class HomeKitException(Exception):
     pass
 
 
-class HttpException(HomeKitException):
+class ProtocolError(HomeKitException):
     """
-    Used within the HTTP Parser.
+    Class to represent an abstraction layer for all errors that are defined in the Error Codes table 4-5 page 60 of the
+    specification.
     """
     pass
 
 
-class UnknownError(HomeKitException):
+class UnknownError(ProtocolError):
     """
     Raised upon receipt of an unknown error (transmission of kTLVError_Unknown). The spec says that this can happen
     during "Add Pairing" (chapter 4.11 page 51) and "Remove Pairing" (chapter 4.12 page 53).
@@ -42,73 +43,90 @@ class UnknownError(HomeKitException):
     pass
 
 
-class AuthenticationError(HomeKitException):
-    """Raised upon receipt of an authentication error"""
+class AuthenticationError(ProtocolError):
+    """
+    Raised upon receipt of an authentication error. This can happen on:
+     * multiple occasions through out setup pairing (M4 / page 42, M5 page 45): if the pairing could not be established
+     * during pair verify (M4 / page 50): if the session key could not be generated
+     * during add pair (M2 / page 52): if the controller is not admin
+     * during remove pairing (M2 / page 54): if the controller is not admin
+     * during list pairing (M2 / page 56): if the controller is not admin
+    """
     pass
 
 
-class BackoffError(HomeKitException):
-    """Raised upon receipt of a backoff error"""
+class BackoffError(ProtocolError):
+    """
+    Raised upon receipt of a back off error. It seems unclear when this is raised, must be related to
+    kTLVType_RetryDelay which is defined on page 61 of the spec.
+    """
     pass
 
 
-class MaxPeersError(HomeKitException):
-    """Raised upon receipt of a maxpeers error"""
+class MaxPeersError(ProtocolError):
+    """
+    Raised upon receipt of a max peers error. This can happen:
+     * during executing a "pair setup" command
+     * during an "add pairing" command
+    """
     pass
 
 
-class MaxTriesError(HomeKitException):
-    """Raised upon receipt of a maxtries error"""
+class MaxTriesError(ProtocolError):
+    """
+    Raised upon receipt of a max tries error during a pair setup procedure. This happens if more than 100 unsuccessful
+    authentication attempts were performed.
+    """
     pass
 
 
-class UnavailableError(HomeKitException):
+class UnavailableError(ProtocolError):
     """Raised upon receipt of an unavailable error"""
     pass
 
 
-class BusyError(HomeKitException):
-    """Raised upon receipt of a busy error"""
-    pass
-
-
-class InvalidError(HomeKitException):
-    """Raised upon receipt of an error not defined in the HomeKit spec"""
-    pass
-
-
-class IllegalData(HomeKitException):
+class BusyError(ProtocolError):
     """
-    # TODO still required?
-    Raised upon receipt of invalid encrypted data"""
+    Raised upon receipt of a busy error during a pair setup procedure. This happens only if a parallel pairing process
+    is ongoing.
+    """
     pass
 
 
-class InvalidAuthTagError(HomeKitException):
+class InvalidError(ProtocolError):
+    """
+    Raised upon receipt of an error not defined in the HomeKit spec. This should basically never be raised since it is
+    the default error in the protocol's error handler.
+    """
+    pass
+
+
+class HttpException(HomeKitException):
+    """
+    Used within the HTTP Parser.
+    """
+    pass
+
+
+class InvalidAuthTagError(ProtocolError):
     """
     Raised upon receipt of an invalid auth tag in Pair Verify Step 3.3 (Page 49).
     """
     pass
 
 
-class IncorrectPairingIdError(HomeKitException):
+class IncorrectPairingIdError(ProtocolError):
     """
     Raised in Pair Verify Step 3.5 (Page 49) if the accessory responds with an unexpected pairing id.
     """
     pass
 
 
-class InvalidSignatureError(HomeKitException):
+class InvalidSignatureError(ProtocolError):
     """
     Raised upon receipt of an invalid signature either from an accessory or from the controller.
     """
     pass
-
-
-class HomeKitStatusException(Exception):
-    # TODO really needed?
-    def __init__(self, status_code):
-        self.status_code = status_code
 
 
 class ConfigurationError(HomeKitException):

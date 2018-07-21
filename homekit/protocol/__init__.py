@@ -87,6 +87,11 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
     assert TLV.kTLVType_State in response_tlv, response_tlv
     assert response_tlv[TLV.kTLVType_State] == TLV.M2
+
+    # the errors here can be:
+    #  * kTLVError_Unavailable: Device is paired
+    #  * kTLVError_MaxTries: More than 100 unsuccessfull attempts
+    #  * kTLVError_Busy: There is already a pairing going on
     if TLV.kTLVType_Error in response_tlv:
         error_handler(response_tlv[TLV.kTLVType_Error], "step 3")
 
