@@ -26,9 +26,9 @@ class TestZeroconf(unittest.TestCase):
 
     @staticmethod
     def find_device(desc, result):
-        device_found = True
         test_device = None
         for device in result:
+            device_found = True
             for key in desc:
                 expected_val = desc[key]
                 if device[key] != expected_val:
@@ -67,7 +67,6 @@ class TestZeroconf(unittest.TestCase):
         zeroconf.register_service(info, allow_name_change=True)
 
         result = discover_homekit_devices()
-
         test_device = self.find_device(desc, result)
 
         zeroconf.unregister_all_services()
