@@ -279,7 +279,6 @@ class Pairing(object):
         data = TLV.decode_bytes_to_list(data)
 
         if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
-            # TODO should not be UnknownError since this is a specific error defined in the spec
             raise UnknownError('unexpected data received: ' + str(data))
         elif data[1][0] == TLV.kTLVType_Error and data[1][1] == TLV.kTLVError_Authentication:
             raise UnpairedError('Must be paired')
