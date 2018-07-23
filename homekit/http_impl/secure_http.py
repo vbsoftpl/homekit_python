@@ -21,7 +21,6 @@ import select
 from homekit.http_impl.response import HttpResponse
 from homekit.crypto.chacha20poly1305 import chacha20_aead_encrypt, chacha20_aead_decrypt
 from homekit.http_impl import HttpContentTypes
-from homekit.http_impl import HttpResponse
 
 
 class SecureHttp:
@@ -109,22 +108,31 @@ class SecureHttp:
         tmp = bytearray()
         exp_len = 1024
         response = HttpResponse()
-        while not response.is_read_completly():
+        while not response.is_read_completely():
             # make sure we read all blocks but without blocking to long. Was introduced to support chunked transfer mode
             # from https://github.com/maximkulkin/esp-homekit
             self.sock.setblocking(0)
-            ready = select.select([self.sock], [], [], timeout)
-            if not ready[0]:
-                # TODO we disrespect the timeout here at the moment, perhaps only bail out while response is empty?
-                #continue
-                break
+
+            no_data_remaining = (len(tmp) == 0)
+
+            # if there is no data use the long timeout so we don't miss anything, else since there is still data go on
+            # much quicker.
+            if no_data_remaining:
+                used_timeout = timeout
+            else:
+                used_timeout = 0.01
+            data_ready = select.select([self.sock], [], [], used_timeout)[0]
+
+            # check if there is anything more to do
+            if not data_ready and no_data_remaining:
+                continue
 
             self.sock.settimeout(0.1)
             data = self.sock.recv(exp_len)
 
-            # ready but no data => quit
-            if not data:
-                break
+            # ready but no data => continue
+            if not data and no_data_remaining:
+                continue
 
             tmp += data
             length = int.from_bytes(tmp[0:2], 'little')
@@ -140,10 +148,10 @@ class SecureHttp:
             tag = tmp[0:16]
             tmp = tmp[16:]
 
-            decypted = self.decrypt_block(length, block, tag)
+            decrypted = self.decrypt_block(length, block, tag)
             # TODO how to react to False?
             if tmp is not False:
-                response.parse(decypted)
+                response.parse(decrypted)
 
             # check how long next block will be
             if int.from_bytes(tmp[0:2], 'little') < 1024:
