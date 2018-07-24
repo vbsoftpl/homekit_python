@@ -104,6 +104,11 @@ class Controller(object):
                                                                      code=code))
         conn.close()
 
+    def close(self):
+        # TODO document
+        for p in self.pairings:
+            self.pairings[p].close()
+
     def get_pairings(self):
         """
         Returns a dict containing all pairings known to the controller.
@@ -181,6 +186,7 @@ class Controller(object):
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
         pairing = perform_pair_setup(conn, pin, str(uuid.uuid4()))
+        conn.close()
         pairing['AccessoryIP'] = connection_data['ip']
         pairing['AccessoryPort'] = connection_data['port']
         self.pairings[alias] = Pairing(pairing)
@@ -207,6 +213,7 @@ class Controller(object):
         }).decode()  # decode is required because post needs a string representation
         session = Session(pairing_data)
         response = session.post('/pairings', request_tlv)
+        session.close()
         data = response.read()
         data = TLV.decode_bytes(data)
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
@@ -233,6 +240,11 @@ class Pairing(object):
         """
         self.pairing_data = pairing_data
         self.session = None
+
+    def close(self):
+        # TODO document
+        if self.session:
+            self.session.close()
 
     def _get_pairing_data(self):
         """
@@ -524,6 +536,10 @@ class Session(object):
         self.a2c_key = a2c_key
         self.pairing_data = pairing_data
         self.sec_http = SecureHttp(self)
+
+    def close(self):
+        # TODO Document
+        self.sock.close()
 
     def get_from_pairing_data(self, key):
         if key not in self.pairing_data:

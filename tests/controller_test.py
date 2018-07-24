@@ -80,7 +80,7 @@ class TestControllerUnpaired(unittest.TestCase):
         cls.httpd.add_accessory(accessory)
         t = T(cls.httpd)
         t.start()
-        time.sleep(5)
+        time.sleep(10)
         cls.controller_file = tempfile.NamedTemporaryFile()
 
     def __init__(self, methodName='runTest'):
@@ -177,6 +177,9 @@ class TestControllerPaired(unittest.TestCase):
 
     def setUp(self):
         self.controller = Controller()
+
+    def tearDown(self):
+        self.controller.close()
 
     def test_01_1_discover(self):
         result = self.controller.discover(5)
