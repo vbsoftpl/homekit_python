@@ -21,6 +21,7 @@ import time
 
 from homekit import Controller
 from homekit import AccessoryServer
+from homekit.exceptions import AccessoryNotFoundError, AlreadyPairedError, UnavailableError, FormatError
 from homekit.model import Accessory
 from homekit.model.services import LightBulbService
 
@@ -52,7 +53,7 @@ def set_value(new_value):
 class TestControllerUnpaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # print('set up class\n')
+        # prepare config file for unpaired accessory server
         cls.config_file = tempfile.NamedTemporaryFile()
         cls.config_file.write("""{
               "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
@@ -97,6 +98,7 @@ class TestControllerUnpaired(unittest.TestCase):
         self.controller = Controller()
 
     def test_01_1_discover(self):
+        """Try to discover the test accessory"""
         result = self.controller.discover()
         found = False
         for device in result:
@@ -105,16 +107,32 @@ class TestControllerUnpaired(unittest.TestCase):
         self.assertTrue(found)
 
     def test_01_2_unpaired_identify(self):
+        """Try to trigger the identification of the test accessory"""
         global identify
         self.controller.identify('12:34:56:00:01:0B')
         self.assertEqual(1, identify)
         identify = 0
 
+    def test_01_3_unpaired_identify_not_found(self):
+        """Try to identify a non existing accessory. This should result in AccessoryNotFoundError"""
+        self.assertRaises(AccessoryNotFoundError, self.controller.identify, '12:34:56:00:01:0C')
+
     def test_02_pair(self):
+        """Try to pair the test accessory"""
         self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
         pairings = self.controller.get_pairings()
         self.controller.save_data(TestControllerUnpaired.controller_file.name)
         self.assertIn('alias', pairings)
+
+    def test_02_pair_accessory_not_found(self):
+        """"""
+        self.assertRaises(AccessoryNotFoundError, self.controller.perform_pairing, 'alias1', '12:34:56:00:01:1B',
+                          '010-22-020')
+
+    def test_02_pair_wrong_pin(self):
+        """"""
+        self.assertRaises(UnavailableError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
+                          '010-22-021')
 
 
 class TestControllerPaired(unittest.TestCase):
@@ -126,7 +144,7 @@ class TestControllerPaired(unittest.TestCase):
             "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
             "accessory_pairing_id": "12:34:56:00:01:0A",
             "accessory_pin": "031-45-154",
-            "c#": 24,
+            "c#": 1,
             "category": "Lightbulb",
             "host_ip": "127.0.0.1",
             "host_port": 51842,
@@ -179,7 +197,7 @@ class TestControllerPaired(unittest.TestCase):
         self.controller = Controller()
 
     def tearDown(self):
-        self.controller.close()
+        self.controller.shutdown()
 
     def test_01_1_discover(self):
         result = self.controller.discover(5)
@@ -188,6 +206,15 @@ class TestControllerPaired(unittest.TestCase):
             if '12:34:56:00:01:0A' == device['id']:
                 found = device
         self.assertIsNotNone(found)
+
+    def test_02_pair_alias_exists(self):
+        """Try to pair the test accessory"""
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.assertRaises(AlreadyPairedError, self.controller.perform_pairing, 'alias', '12:34:56:00:01:0B', '010-22-020')
+
+    def test_02_paired_identify_wrong_method(self):
+        """Try to identify an already paired accessory via the controller's method for unpaired accessories."""
+        self.assertRaises(AlreadyPairedError, self.controller.identify, '12:34:56:00:01:0A')
 
     def test_03_get_accessories(self):
         self.controller.load_data(TestControllerPaired.controller_file.name)
@@ -218,6 +245,7 @@ class TestControllerPaired(unittest.TestCase):
         self.assertEqual(False, result[(1, 10)]['value'])
 
     def test_05_1_put_characteristic(self):
+        """"""
         global value
         self.controller.load_data(TestControllerPaired.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
@@ -228,7 +256,26 @@ class TestControllerPaired(unittest.TestCase):
         self.assertEqual(result, {})
         self.assertEqual(0, value)
 
+    def test_05_2_put_characteristic_do_conversion(self):
+        """"""
+        global value
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.put_characteristics([(1, 10, 'On')], do_conversion=True)
+        self.assertEqual(result, {})
+        self.assertEqual(1, value)
+        result = pairing.put_characteristics([(1, 10, 'Off')], do_conversion=True)
+        self.assertEqual(result, {})
+        self.assertEqual(0, value)
+
+    def test_05_2_put_characteristic_do_conversion_wrong_value(self):
+        """Tests that values that are not convertable to boolean cause a HomeKitTypeException"""
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        self.assertRaises(FormatError, pairing.put_characteristics, [(1, 10, 'Hallo Welt')], do_conversion=True)
+
     def test_06_list_pairings(self):
+        """Gets the listing of registered controllers of the device. Count must be 1."""
         self.controller.load_data(TestControllerPaired.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         result = pairing.list_pairings()
@@ -242,6 +289,7 @@ class TestControllerPaired(unittest.TestCase):
         self.assertIn('pairingId', result)
 
     def test_07_paired_identify(self):
+        """Tests the paired variant of the identify method."""
         global identify
         self.controller.load_data(TestControllerPaired.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
@@ -250,7 +298,8 @@ class TestControllerPaired(unittest.TestCase):
         self.assertEqual(1, identify)
         identify = 0
 
-    def test_99_list_pairings(self):
+    def test_99_remove_pairing(self):
+        """Tests that a removed pairing is not present in the list of pairings anymore."""
         self.controller.load_data(TestControllerPaired.controller_file.name)
         self.controller.remove_pairing('alias')
         pairings = self.controller.get_pairings()

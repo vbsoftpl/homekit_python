@@ -99,13 +99,16 @@ class Controller(object):
         if resp.code == 400:
             data = json.loads(resp.read().decode())
             code = data['status']
+            conn.close()
             raise AlreadyPairedError(
                 'identify failed because: {reason} ({code}).'.format(reason=HapStatusCodes[code],
                                                                      code=code))
         conn.close()
 
-    def close(self):
-        # TODO document
+    def shutdown(self):
+        """
+        Shuts down the controller by closing all connections that might be held open by the pairings of the controller.
+        """
         for p in self.pairings:
             self.pairings[p].close()
 
@@ -177,7 +180,7 @@ class Controller(object):
         :raises BusyError: if a parallel pairing is ongoing
         :raises AuthenticationError: if the verification of the device's SRP proof fails
         :raises MaxPeersError: if the device cannot accept an additional pairing
-        :raises IllegalData: if the verification of the accessory's data fails
+        :raises UnavailableError: on wrong pin
         """
         if alias in self.pairings:
             raise AlreadyPairedError('Alias "{a}" is already paired.'.format(a=alias))
@@ -185,8 +188,10 @@ class Controller(object):
         if connection_data is None:
             raise AccessoryNotFoundError('Cannot find accessory with id "{i}".'.format(i=accessory_id))
         conn = HomeKitHTTPConnection(connection_data['ip'], port=connection_data['port'])
-        pairing = perform_pair_setup(conn, pin, str(uuid.uuid4()))
-        conn.close()
+        try:
+            pairing = perform_pair_setup(conn, pin, str(uuid.uuid4()))
+        finally:
+            conn.close()
         pairing['AccessoryIP'] = connection_data['ip']
         pairing['AccessoryPort'] = connection_data['port']
         self.pairings[alias] = Pairing(pairing)
@@ -242,7 +247,9 @@ class Pairing(object):
         self.session = None
 
     def close(self):
-        # TODO document
+        """
+        Close the pairing's communications. This closes the session.
+        """
         if self.session:
             self.session.close()
 
@@ -374,6 +381,8 @@ class Pairing(object):
         :param characteristics: a list of 3-tupels of accessory id, instance id and the value
         :param do_conversion: select if conversion is done (False is default)
         :return: a dict from (aid, iid) onto {status, description}
+        :raises FormatError: if the input value could not be converted to the target type and conversion was
+                             requested
         """
         if not self.session:
             self.session = Session(self.pairing_data)
@@ -538,7 +547,9 @@ class Session(object):
         self.sec_http = SecureHttp(self)
 
     def close(self):
-        # TODO Document
+        """
+        Close the session. This closes the socket.
+        """
         self.sock.close()
 
     def get_from_pairing_data(self, key):
@@ -586,7 +597,7 @@ def check_convert_value(val, target_type):
     :param val: the original value
     :param target_type: the target type of the conversion
     :return: the converted value
-    :raises HomeKitTypeException: if the input value could not be converted to the target type
+    :raises FormatError: if the input value could not be converted to the target type
     """
     if target_type == CharacteristicFormats.bool:
         try:
