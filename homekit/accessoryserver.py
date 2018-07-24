@@ -68,6 +68,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         self.mdns_type = '_hap._tcp.local.'
         self.mdns_name = self.data.name + '._hap._tcp.local.'
         self.identify_callback = None
+        self.zeroconf_info = None
 
         self.accessories = Accessories()
 
@@ -100,14 +101,14 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         if self.data.is_paired:
             desc['sf'] = '0'
 
-        # TODO what does this 'ash-2.local.' mean?
-        info = ServiceInfo(self.mdns_type, self.mdns_name, socket.inet_aton(self.data.ip), self.data.port, 0, 0, desc,
-                           'ash-2.local.')
-        self.zeroconf.unregister_all_services()
-        self.zeroconf.register_service(info, allow_name_change=True)
+        self.zeroconf_info = ServiceInfo(self.mdns_type, self.mdns_name, address=socket.inet_aton(self.data.ip),
+                                         port=self.data.port, properties= desc)
+        self.zeroconf.unregister_service(self.zeroconf_info)
+        self.zeroconf.register_service(self.zeroconf_info, allow_name_change=True)
 
     def unpublish_device(self):
-        self.zeroconf.unregister_all_services()
+        if self.zeroconf_info:
+            self.zeroconf.unregister_service(self.zeroconf_info)
 
     def shutdown(self):
         # tell all handlers to close the connection
