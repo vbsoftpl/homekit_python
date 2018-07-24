@@ -160,7 +160,7 @@ class TestControllerPaired(unittest.TestCase):
                 "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
                 "AccessoryPairingID": "12:34:56:00:01:0A",
                 "AccessoryPort": 51842,
-                "AccessoryIP": "192.168.178.21",
+                "AccessoryIP": "127.0.0.1",
                 "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
             }
         }""".encode())
