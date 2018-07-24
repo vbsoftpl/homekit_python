@@ -128,7 +128,7 @@ class TestControllerPaired(unittest.TestCase):
             "accessory_pin": "031-45-154",
             "c#": 24,
             "category": "Lightbulb",
-            "host_ip": "192.168.178.21",
+            "host_ip": "127.0.0.1",
             "host_port": 51842,
             "name": "unittestLight",
             "peers": {
