@@ -8,6 +8,7 @@ package homekit {
         + shutdown()
         + add_accessory()
         + serve_forever()
+        + set_identify_callback(func)
     }
     package model {
         class FeatureFlags
@@ -86,7 +87,8 @@ package homekit {
 
         class Accessory {
             + aid
-            + add_service()
+            + add_service(service)
+            + set_identify_callback(func)
         }
     }
 

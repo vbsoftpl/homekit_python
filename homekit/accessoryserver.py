@@ -67,6 +67,7 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
         self.zeroconf = Zeroconf()
         self.mdns_type = '_hap._tcp.local.'
         self.mdns_name = self.data.name + '._hap._tcp.local.'
+        self.identify_callback = None
 
         self.accessories = Accessories()
 
@@ -74,6 +75,15 @@ class AccessoryServer(ThreadingMixIn, HTTPServer):
 
     def add_accessory(self, accessory):
         self.accessories.add_accessory(accessory)
+
+    def set_identify_callback(self, func):
+        """
+        Sets the callback function for this accessory server. This will NOT be applied to all accessories registered
+        with. This function will be called on unpaired calls to identify.
+
+        :param func: a function without any parameters and without return type.
+        """
+        self.identify_callback = func
 
     def publish_device(self):
         desc = {'md': str(self.data.name),  # model name of accessory
@@ -290,6 +300,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.close_connection = False
 
         self.timeout_counter = 0
+
+        # get the identify callback function from calling server
+        self.identify_callback = server.identify_callback
 
         # init super class
         BaseHTTPRequestHandler.__init__(self, request, client_address, server)
@@ -595,6 +608,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(result_bytes)
         else:
             # perform identify action
+            if self.identify_callback:
+                self.identify_callback()
             # send status code
             self.send_response(HttpStatusCodes.NO_CONTENT)
             self.end_headers()

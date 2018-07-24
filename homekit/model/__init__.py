@@ -20,6 +20,7 @@ from homekit.model.services import AccessoryInformationService, LightBulbService
 from homekit.model.categories import Categories
 from homekit.model.characteristics import CharacteristicPermissions, CharacteristicFormats
 from homekit.model.feature_flags import FeatureFlags
+from homekit.model.characteristics import IdentifyCharacteristic
 
 
 class Accessory(ToDictMixin):
@@ -32,11 +33,19 @@ class Accessory(ToDictMixin):
     def add_service(self, service):
         self.services.append(service)
 
-    def get_name(self):
+    def set_identify_callback(self, func):
+        """
+        Set the callback function for this accessory. This function will be called on paired calls to identify.
+
+        :param func: a function without any parameters and without return type.
+        """
+        def tmp(x):
+            func()
         for service in self.services:
             if isinstance(service, AccessoryInformationService):
-                return service.get_name()
-        return None
+                for characteristic in service.characteristics:
+                    if isinstance(characteristic, IdentifyCharacteristic):
+                        characteristic.set_set_value_callback(tmp)
 
 
 class Accessories(ToDictMixin):

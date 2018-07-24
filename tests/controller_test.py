@@ -35,15 +35,29 @@ class T(threading.Thread):
         self.a_s.serve_forever()
 
 
-class TestController(unittest.TestCase):
+value = 0
+identify = 0
+
+
+def identify_callback():
+    global identify
+    identify = 1
+
+
+def set_value(new_value):
+    global value
+    value = new_value
+
+
+class TestControllerUnpaired(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        #print('set up class\n')
+        # print('set up class\n')
         cls.config_file = tempfile.NamedTemporaryFile()
         cls.config_file.write("""{
               "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
               "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
-              "accessory_pairing_id": "12:34:56:00:01:0A",
+              "accessory_pairing_id": "12:34:56:00:01:0B",
               "accessory_pin": "010-22-020",
               "c#": 0,
               "category": "Lightbulb",
@@ -57,12 +71,16 @@ class TestController(unittest.TestCase):
         cls.config_file.flush()
 
         cls.httpd = AccessoryServer(cls.config_file.name, None)
+        cls.httpd.set_identify_callback(identify_callback)
         accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
+        accessory.set_identify_callback(identify_callback)
+        lightBulbService = LightBulbService()
+        lightBulbService.set_on_set_callback(set_value)
+        accessory.services.append(lightBulbService)
         cls.httpd.add_accessory(accessory)
         t = T(cls.httpd)
         t.start()
-        time.sleep(10)
-        #print('...')
+        time.sleep(5)
         cls.controller_file = tempfile.NamedTemporaryFile()
 
     def __init__(self, methodName='runTest'):
@@ -74,37 +92,163 @@ class TestController(unittest.TestCase):
         cls.httpd.unpublish_device()
         cls.httpd.shutdown()
         cls.config_file.close()
-        #print('foo')
 
     def setUp(self):
         self.controller = Controller()
-    #     print('set up \n')
 
-    # def tearDown(self):
-    #     print('tear down\n')
-
-    def test_01_discover(self):
+    def test_01_1_discover(self):
         result = self.controller.discover()
         found = False
         for device in result:
-            if '12:34:56:00:01:0A' == device['id']:
+            if '12:34:56:00:01:0B' == device['id']:
                 found = True
         self.assertTrue(found)
 
+    def test_01_2_unpaired_identify(self):
+        global identify
+        self.controller.identify('12:34:56:00:01:0B')
+        self.assertEqual(1, identify)
+        identify = 0
+
     def test_02_pair(self):
-        self.controller.perform_pairing('alias', '12:34:56:00:01:0A', '010-22-020')
+        self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
         pairings = self.controller.get_pairings()
-        self.controller.save_data(TestController.controller_file.name)
+        self.controller.save_data(TestControllerUnpaired.controller_file.name)
         self.assertIn('alias', pairings)
 
-    def test_03_get_accessories(self):
-        self.controller.load_data(TestController.controller_file.name)
-        result = self.controller.get_pairings()['alias'].get_accessories()
-        #print(result)
 
-    def test_04_get_characteristics(self):
-        self.controller.load_data(TestController.controller_file.name)
-        result = self.controller.get_pairings()['alias'].get_characteristics([(1,4)])
-        self.assertIn((1,4), result)
-        self.assertIn('value', result[(1,4)])
-        self.assertEquals('lusiardi.de',result[(1,4)]['value'])
+class TestControllerPaired(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.config_file = tempfile.NamedTemporaryFile()
+        cls.config_file.write("""{
+            "accessory_ltpk": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+            "accessory_ltsk": "3d99f3e959a1f93af4056966f858074b2a1fdec1c5fd84a51ea96f9fa004156a",
+            "accessory_pairing_id": "12:34:56:00:01:0A",
+            "accessory_pin": "031-45-154",
+            "c#": 24,
+            "category": "Lightbulb",
+            "host_ip": "192.168.178.21",
+            "host_port": 51842,
+            "name": "unittestLight",
+            "peers": {
+                "decc6fa3-de3e-41c9-adba-ef7409821bfc": {
+                    "admin": true,
+                    "key": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8"
+                }
+            },
+            "unsuccessful_tries": 0
+        }""".encode())
+        cls.config_file.flush()
+
+        cls.httpd = AccessoryServer(cls.config_file.name, None)
+        cls.httpd.set_identify_callback(identify_callback)
+        accessory = Accessory('Testlicht', 'lusiardi.de', 'Demoserver', '0001', '0.1')
+        accessory.set_identify_callback(identify_callback)
+        lightBulbService = LightBulbService()
+        lightBulbService.set_on_set_callback(set_value)
+        accessory.services.append(lightBulbService)
+        cls.httpd.add_accessory(accessory)
+        t = T(cls.httpd)
+        t.start()
+        time.sleep(5)
+        cls.controller_file = tempfile.NamedTemporaryFile()
+        cls.controller_file.write("""{
+            "alias": {
+                "iOSDeviceLTPK": "d708df2fbf4a8779669f0ccd43f4962d6d49e4274f88b1292f822edc3bcf8ed8",
+                "iOSPairingId": "decc6fa3-de3e-41c9-adba-ef7409821bfc",
+                "AccessoryLTPK": "7986cf939de8986f428744e36ed72d86189bea46b4dcdc8d9d79a3e4fceb92b9",
+                "AccessoryPairingID": "12:34:56:00:01:0A",
+                "AccessoryPort": 51842,
+                "AccessoryIP": "192.168.178.21",
+                "iOSDeviceLTSK": "fa45f082ef87efc6c8c8d043d74084a3ea923a2253e323a7eb9917b4090c2fcc"
+            }
+        }""".encode())
+        cls.controller_file.flush()
+
+    def __init__(self, methodName='runTest'):
+        unittest.TestCase.__init__(self, methodName)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.unpublish_device()
+        cls.httpd.shutdown()
+        cls.config_file.close()
+
+    def setUp(self):
+        self.controller = Controller()
+
+    def test_01_1_discover(self):
+        result = self.controller.discover(5)
+        found = None
+        for device in result:
+            if '12:34:56:00:01:0A' == device['id']:
+                found = device
+        self.assertIsNotNone(found)
+
+    def test_03_get_accessories(self):
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_accessories()
+        self.assertEqual(1, len(result))
+        result = result[0]
+        self.assertIn('aid', result)
+        self.assertIn('services', result)
+
+    def test_04_1_get_characteristic(self):
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_characteristics([(1, 4)])
+        self.assertIn((1, 4), result)
+        self.assertIn('value', result[(1, 4)])
+        self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+
+    def test_04_2_get_characteristics(self):
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_characteristics([(1, 4), (1, 10)])
+        self.assertIn((1, 4), result)
+        self.assertIn('value', result[(1, 4)])
+        self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+        self.assertIn((1, 10), result)
+        self.assertIn('value', result[(1, 10)])
+        self.assertEqual(False, result[(1, 10)]['value'])
+
+    def test_05_1_put_characteristic(self):
+        global value
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.put_characteristics([(1, 10, 'On')])
+        self.assertEqual(result, {})
+        self.assertEqual(1, value)
+        result = pairing.put_characteristics([(1, 10, 'Off')])
+        self.assertEqual(result, {})
+        self.assertEqual(0, value)
+
+    def test_06_list_pairings(self):
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.list_pairings()
+        self.assertEqual(1, len(result))
+        result = result[0]
+        self.assertIn('controllerType', result)
+        self.assertEqual(result['controllerType'], 'admin')
+        self.assertIn('publicKey', result)
+        self.assertIn('permissions', result)
+        self.assertEqual(result['permissions'], 1)
+        self.assertIn('pairingId', result)
+
+    def test_07_paired_identify(self):
+        global identify
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.identify()
+        self.assertTrue(result)
+        self.assertEqual(1, identify)
+        identify = 0
+
+    def test_99_list_pairings(self):
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        self.controller.remove_pairing('alias')
+        pairings = self.controller.get_pairings()
+        self.assertNotIn('alias', pairings)
