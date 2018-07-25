@@ -49,3 +49,15 @@ class TestCharacteristicsTypes(unittest.TestCase):
         self.assertEqual(CharacteristicsTypes.get_short(CharacteristicsTypes.AIR_PURIFIER_STATE_CURRENT),
                          'air-purifier.state.current')
         self.assertEqual(CharacteristicsTypes.get_short('1a'), 'Unknown Characteristic 1a')
+
+    def test_get_short_uuid(self):
+        self.assertEqual(CharacteristicsTypes.get_short_uuid(CharacteristicsTypes.MANUFACTURER), '20')
+        self.assertEqual(CharacteristicsTypes.get_short_uuid('public.hap.characteristic.model'), '21')
+        self.assertEqual(CharacteristicsTypes.get_short_uuid('22'), '22')
+
+    def test_get_short_uuid_non_apple_uuid(self):
+        self.assertEqual(CharacteristicsTypes.get_short_uuid('00000025-0000-0000-0000-000000000000'),
+                         '00000025-0000-0000-0000-000000000000')
+
+    def test_get_short_uuid_unknown(self):
+        self.assertRaises(KeyError, CharacteristicsTypes.get_short_uuid, 'XXX')

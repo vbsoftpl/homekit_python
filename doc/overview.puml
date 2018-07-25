@@ -44,6 +44,13 @@ package homekit {
                 spec chapter 8.
             end note
 
+            class CharacteristicsTypes {
+                + __get_item__(item)
+                + get_short(uuid)
+                + get_short_uuid(item)
+                + get_uuid(item)
+            }
+
             class AbstractCharacteristic {
                 + iid
                 + type

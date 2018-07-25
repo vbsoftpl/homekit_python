@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import uuid
 
 class _CharacteristicsTypes(object):
     """
@@ -272,6 +273,31 @@ class _CharacteristicsTypes(object):
             return self._characteristics[uuid].split('.', maxsplit=3)[3]
 
         return 'Unknown Characteristic {i}'.format(i=orig_item)
+
+    def get_short_uuid(self, item_name):
+        """
+        Returns the short UUID for either a full UUID or textual characteristic type name. For information on
+        full and short UUID consult chapter 5.6.1 page 72 of the specification. It also supports to pass through full
+        non-HomeKit UUIDs.
+
+        :param item_name: either the type name (e.g. "public.hap.characteristic.position.current") or the short UUID as
+                          string or a HomeKit specific full UUID.
+        :return: the short UUID (e.g. "6D" instead of "0000006D-0000-1000-8000-0026BB765291")
+        :raises KeyError: if the input is neither a UUID nor a type name. Specific error is given in the message.
+        """
+        orig_item = item_name
+        if item_name.endswith(self.baseUUID):
+            item_name = item_name.split('-', 1)[0]
+            return item_name.lstrip('0')
+        if item_name in self._characteristics:
+            return item_name
+        if item_name in self._characteristics_rev:
+            return self._characteristics_rev[item_name]
+        try:
+            uuid.UUID('{{{s}}}'.format(s=item_name))
+            return item_name
+        except ValueError:
+            raise KeyError('No short UUID found for Item {item}'.format(item=orig_item))
 
     def get_uuid(self, item_name):
         """
