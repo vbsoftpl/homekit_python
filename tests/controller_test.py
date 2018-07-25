@@ -232,6 +232,7 @@ class TestControllerPaired(unittest.TestCase):
         self.assertIn((1, 4), result)
         self.assertIn('value', result[(1, 4)])
         self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+        self.assertEqual(['value'], list(result[(1, 4)].keys()))
 
     def test_04_2_get_characteristics(self):
         self.controller.load_data(TestControllerPaired.controller_file.name)
@@ -243,6 +244,53 @@ class TestControllerPaired(unittest.TestCase):
         self.assertIn((1, 10), result)
         self.assertIn('value', result[(1, 10)])
         self.assertEqual(False, result[(1, 10)]['value'])
+
+    def test_04_3_get_characteristic_with_events(self):
+        """This tests the include_events flag on get_characteristics"""
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_characteristics([(1, 4)], include_events=True)
+        self.assertIn((1, 4), result)
+        self.assertIn('value', result[(1, 4)])
+        self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+        self.assertIn('ev', result[(1, 4)])
+
+    def test_04_4_get_characteristic_with_type(self):
+        """This tests the include_type flag on get_characteristics"""
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_characteristics([(1, 4)], include_type=True)
+        self.assertIn((1, 4), result)
+        self.assertIn('value', result[(1, 4)])
+        self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+        self.assertIn('type', result[(1, 4)])
+        self.assertEqual('20', result[(1, 4)]['type'])
+
+    def test_04_5_get_characteristic_with_perms(self):
+        """This tests the include_perms flag on get_characteristics"""
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_characteristics([(1, 4)], include_perms=True)
+        self.assertIn((1, 4), result)
+        self.assertIn('value', result[(1, 4)])
+        self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+        self.assertIn('perms', result[(1, 4)])
+        self.assertEqual(['pr'], result[(1, 4)]['perms'])
+        result = pairing.get_characteristics([(1, 3)], include_perms=True)
+        self.assertEqual(['pw'], result[(1, 3)]['perms'])
+
+    def test_04_4_get_characteristic_with_meta(self):
+        """This tests the include_meta flag on get_characteristics"""
+        self.controller.load_data(TestControllerPaired.controller_file.name)
+        pairing = self.controller.get_pairings()['alias']
+        result = pairing.get_characteristics([(1, 4)], include_meta=True)
+        self.assertIn((1, 4), result)
+        self.assertIn('value', result[(1, 4)])
+        self.assertEqual('lusiardi.de', result[(1, 4)]['value'])
+        self.assertIn('format', result[(1, 4)])
+        self.assertEqual('string', result[(1, 4)]['format'])
+        self.assertIn('maxLen', result[(1, 4)])
+        self.assertEqual(64, result[(1, 4)]['maxLen'])
 
     def test_05_1_put_characteristic(self):
         """"""
@@ -269,7 +317,7 @@ class TestControllerPaired(unittest.TestCase):
         self.assertEqual(0, value)
 
     def test_05_2_put_characteristic_do_conversion_wrong_value(self):
-        """Tests that values that are not convertable to boolean cause a HomeKitTypeException"""
+        """Tests that values that are not convertible to boolean cause a HomeKitTypeException"""
         self.controller.load_data(TestControllerPaired.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
         self.assertRaises(FormatError, pairing.put_characteristics, [(1, 10, 'Hallo Welt')], do_conversion=True)

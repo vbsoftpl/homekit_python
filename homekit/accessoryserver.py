@@ -34,9 +34,11 @@ import logging
 from homekit.crypto.chacha20poly1305 import chacha20_aead_decrypt, chacha20_aead_encrypt
 from homekit.crypto.srp import SrpServer
 
-from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError, FormatError
+from homekit.exceptions import ConfigurationError, ConfigLoadingError, ConfigSavingError, FormatError, \
+    CharacteristicPermissionError
 from homekit.http_impl import HttpStatusCodes
 from homekit.model import Accessories, Categories
+from homekit.model.characteristics import CharacteristicsTypes
 from homekit.protocol import TLV
 from homekit.protocol.statuscodes import HapStatusCodes
 
@@ -452,26 +454,26 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         # handle meta param
         meta = False
         if 'meta' in params:
-            meta = params['meta'] == 1
+            meta = params['meta'] == '1'
 
         # handle perms param
         perms = False
         if 'perms' in params:
-            perms = params['perms'] == 1
+            perms = params['perms'] == '1'
 
         # handle type param
-        type = False
+        include_type = False
         if 'type' in params:
-            type = params['type'] == 1
+            include_type = params['type'] == '1'
 
         # handle ev param
         ev = False
         if 'ev' in params:
-            ev = params['ev'] == 1
+            ev = params['ev'] == '1'
 
         if AccessoryRequestHandler.DEBUG_GET_CHARACTERISTICS:
-            self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms, type,
-                             ev)
+            self.log_message('query parameters: ids: %s, meta: %s, perms: %s, type: %s, ev: %s', ids, meta, perms,
+                             include_type, ev)
 
         result = {
             'characteristics': []
@@ -499,11 +501,27 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                             result['characteristics'].append(
                                 {'aid': aid, 'iid': cid, 'status': HapStatusCodes.INVALID_VALUE})
                             errors += 1
+                        except CharacteristicPermissionError as e:
+                            result['characteristics'].append(
+                                {'aid': aid, 'iid': cid, 'status': HapStatusCodes.CANT_READ_WRITE_ONLY})
+                            errors += 1
                         except Exception as e:
                             self.log_error('Exception while getting value for %s.%s: %s', aid, cid, str(e))
                             result['characteristics'].append(
                                 {'aid': aid, 'iid': cid, 'status': HapStatusCodes.OUT_OF_RESOURCES})
                             errors += 1
+                        if ev:
+                            # TODO handling of events is missing
+                            result['characteristics'][-1]['ev'] = False
+                        if include_type:
+                            result['characteristics'][-1]['type'] = \
+                                CharacteristicsTypes.get_short_uuid(characteristic.type)
+                        if perms:
+                            result['characteristics'][-1]['perms'] = characteristic.perms
+                        if meta:
+                            meta_data = characteristic.get_meta()
+                            for key in meta_data:
+                                result['characteristics'][-1][key] = meta_data[key]
                 # report missing resources
                 if not found:
                     result['characteristics'].append(
