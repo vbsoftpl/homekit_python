@@ -34,6 +34,15 @@ class HueCharacteristic(AbstractCharacteristic):
         self.value = 0
         self.unit = CharacteristicUnits.arcdegrees
 
+    def get_meta(self):
+        """See super class"""
+        tmp = super(HueCharacteristic, self).get_meta()
+        tmp['minValue'] = self.minValue
+        tmp['maxValue'] = self.maxValue
+        tmp['minStep'] = self.minStep
+        tmp['unit'] = self.unit
+        return tmp
+
 
 class HueCharacteristicMixin(object):
     def __init__(self, iid):

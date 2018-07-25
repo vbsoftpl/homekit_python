@@ -123,7 +123,7 @@ class AbstractCharacteristic(ToDictMixin):
 
     def get_value(self):
         """
-        This function returns the value of this characteristic. Permissions are checked first, then either the callback
+        This method returns the value of this characteristic. Permissions are checked first, then either the callback
         for getting the values is executed (execution time may vary) or the value is directly returned if not callback
         is given.
 
@@ -135,3 +135,15 @@ class AbstractCharacteristic(ToDictMixin):
         if self._get_value_callback:
             return self._get_value_callback()
         return self.value
+
+    def get_meta(self):
+        """
+        This method returns a dict of meta information for this characteristic. This includes at least the format of
+        the characteristic but may contain any other specific attribute.
+
+        :return: a dict
+        """
+        tmp = {'format': self.format}
+        if self.format == CharacteristicFormats.string:
+            tmp['maxLen'] = 64
+        return tmp

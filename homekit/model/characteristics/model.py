@@ -25,5 +25,4 @@ class ModelCharacteristic(AbstractCharacteristic):
     def __init__(self, iid, model):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.MODEL, CharacteristicFormats.string)
         self.value = model
-        self.maxLen = 64
         self.description = 'Model'

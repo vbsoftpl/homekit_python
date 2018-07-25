@@ -33,6 +33,15 @@ class CurrentTemperatureCharacteristic(AbstractCharacteristic):
         self.unit = CharacteristicUnits.celsius
         self.value = 23.0
 
+    def get_meta(self):
+        """See super class"""
+        tmp = super(CurrentTemperatureCharacteristic, self).get_meta()
+        tmp['minValue'] = self.minValue
+        tmp['maxValue'] = self.maxValue
+        tmp['minStep'] = self.minStep
+        tmp['unit'] = self.unit
+        return tmp
+
 
 class CurrentTemperatureCharacteristicMixin(object):
     def __init__(self, iid):

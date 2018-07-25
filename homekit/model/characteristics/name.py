@@ -25,5 +25,4 @@ class NameCharacteristic(AbstractCharacteristic):
     def __init__(self, iid, name):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.NAME, CharacteristicFormats.string)
         self.value = name
-        self.maxLen = 64
         self.description = 'Name'

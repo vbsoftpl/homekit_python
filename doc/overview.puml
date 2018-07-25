@@ -74,6 +74,7 @@ package homekit {
                 + set_events(value)
                 + set_value(value)
                 + get_value(value)
+                + get_meta()
             }
 
             class OnCharacteristicMixin {

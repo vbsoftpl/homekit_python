@@ -34,7 +34,17 @@ class CurrentHeatingCoolingStateCharacteristic(AbstractCharacteristic):
         self.minValue = 0
         self.maxValue = 2
         self.minStep = 1
+        self.valid_values = [0, 1, 2]
         self.value = 0
+
+    def get_meta(self):
+        """See super class"""
+        tmp = super(CurrentHeatingCoolingStateCharacteristic, self).get_meta()
+        tmp['minValue'] = self.minValue
+        tmp['maxValue'] = self.maxValue
+        tmp['minStep'] = self.minStep
+        tmp['valid_values'] = self.valid_values
+        return tmp
 
 
 class CurrentHeatingCoolingStateCharacteristicMixin(object):

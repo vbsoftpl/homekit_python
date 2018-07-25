@@ -25,5 +25,4 @@ class SerialNumberCharacteristic(AbstractCharacteristic):
     def __init__(self, iid, number):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.SERIAL_NUMBER, CharacteristicFormats.string)
         self.value = number
-        self.maxLen = 64
         self.description = 'Serial Number'

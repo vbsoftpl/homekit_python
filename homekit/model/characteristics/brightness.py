@@ -34,6 +34,15 @@ class BrightnessCharacteristic(AbstractCharacteristic):
         self.value = 0
         self.unit = CharacteristicUnits.percentage
 
+    def get_meta(self):
+        """See super class"""
+        tmp = super(BrightnessCharacteristic, self).get_meta()
+        tmp['minValue'] = self.minValue
+        tmp['maxValue'] = self.maxValue
+        tmp['minStep'] = self.minStep
+        tmp['unit'] = self.unit
+        return tmp
+
 
 class BrightnessCharacteristicMixin(object):
     def __init__(self, iid):

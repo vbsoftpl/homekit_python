@@ -25,5 +25,4 @@ class ManufacturerCharacteristic(AbstractCharacteristic):
     def __init__(self, iid, manufacturer):
         AbstractCharacteristic.__init__(self, iid, CharacteristicsTypes.MANUFACTURER, CharacteristicFormats.string)
         self.value = manufacturer
-        self.maxLen = 64
         self.description = 'Manufacturer'
