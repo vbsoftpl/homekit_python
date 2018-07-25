@@ -39,22 +39,6 @@ class TestTLV(unittest.TestCase):
         res = TLV.decode_bytearray_to_list(TLV.encode_list(val))
         self.assertEqual(val, res)
 
-    def test_example1(self):
-        example_1 = bytearray.fromhex('060103010568656c6c6f')
-        dict_1_1 = TLV.decode_bytearray(example_1)
-
-        bytearray_1 = TLV.encode_dict(dict_1_1)
-        dict_1_2 = TLV.decode_bytearray(bytearray_1)
-        self.assertEqual(dict_1_1, dict_1_2)
-
-    def test_example2(self):
-        example_2 = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
-        dict_2_1 = TLV.decode_bytearray(example_2)
-
-        bytearray_2 = TLV.encode_dict(dict_2_1)
-        dict_2_2 = TLV.decode_bytearray(bytearray_2)
-        self.assertEqual(dict_2_1, dict_2_2)
-
     def test_long_values_decode_bytearray_to_list(self):
         example = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
         expected = [
@@ -115,14 +99,6 @@ class TestTLV(unittest.TestCase):
     def test_decode_bytes_to_list_not_enough_data(self):
         example = bytes(bytearray.fromhex('060103' + '09FF' + 25 * '61'))  # should have been 255 '61'
         self.assertRaises(TlvParseException, TLV.decode_bytes_to_list, example)
-
-    def test_encode_dict_key_error(self):
-        example = {-1: 'hello'}
-        self.assertRaises(ValueError, TLV.encode_dict, example)
-        example = {256: 'hello'}
-        self.assertRaises(ValueError, TLV.encode_dict, example)
-        example = {'test': 'hello'}
-        self.assertRaises(ValueError, TLV.encode_dict, example)
 
     def test_encode_list_key_error(self):
         example = [(-1, 'hello',), ]

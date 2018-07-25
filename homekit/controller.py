@@ -211,11 +211,11 @@ class Controller(object):
         """
         # package visibility like in java would be nice here
         pairing_data = self.pairings[alias]._get_pairing_data()
-        request_tlv = TLV.encode_dict({
-            TLV.kTLVType_State: TLV.M1,
-            TLV.kTLVType_Method: TLV.RemovePairing,
-            TLV.kTLVType_Identifier: pairing_data['iOSPairingId'].encode()
-        }).decode()  # decode is required because post needs a string representation
+        request_tlv = TLV.encode_list([
+            (TLV.kTLVType_State, TLV.M1),
+            (TLV.kTLVType_Method, TLV.RemovePairing),
+            (TLV.kTLVType_Identifier, pairing_data['iOSPairingId'].encode())
+        ]).decode()  # decode is required because post needs a string representation
         session = Session(pairing_data)
         response = session.post('/pairings', request_tlv)
         session.close()

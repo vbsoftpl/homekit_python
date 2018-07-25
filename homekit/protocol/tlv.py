@@ -124,42 +124,6 @@ class TLV:
         return valid
 
     @staticmethod
-    def encode_dict(d: dict) -> bytearray:
-        """
-        TODO remove this function since TLV are not position independent
-        """
-        result = bytearray()
-        for key in d:
-            if not TLV.validate_key(key):
-                raise ValueError('Invalid key')
-
-            value = d[key]
-
-            # handle separators properly
-            if key == TLV.kTLVType_Separator:
-                if len(value) == 0:
-                    result.append(key)
-                    result.append(0)
-                else:
-                    raise ValueError('Separator must not have data')
-
-            while len(value) > 0:
-                result.append(key)
-                if len(value) > 255:
-                    length = 255
-                    result.append(length)
-                    for b in value[:length]:
-                        result.append(b)
-                    value = value[length:]
-                else:
-                    length = len(value)
-                    result.append(length)
-                    for b in value[:length]:
-                        result.append(b)
-                    value = value[length:]
-        return result
-
-    @staticmethod
     def encode_list(d: list) -> bytearray:
         result = bytearray()
         for p in d:

@@ -645,7 +645,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
     def _post_pair_verify(self):
         d_req = TLV.decode_bytes(self.body)
 
-        d_res = {}
+        d_res = []
 
         if d_req[TLV.kTLVType_State] == TLV.M1:
             # step #2 Accessory -> iOS Device Verify Start Response
@@ -674,11 +674,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             accessory_signature = accessory_ltsk.sign(accessory_info)
 
             # 5) sub tlv
-            sub_tlv = {
-                TLV.kTLVType_Identifier: self.server.data.accessory_pairing_id_bytes,
-                TLV.kTLVType_Signature: accessory_signature
-            }
-            sub_tlv_b = TLV.encode_dict(sub_tlv)
+            sub_tlv = [
+                (TLV.kTLVType_Identifier, self.server.data.accessory_pairing_id_bytes),
+                (TLV.kTLVType_Signature, accessory_signature)
+            ]
+            sub_tlv_b = TLV.encode_list(sub_tlv)
 
             # 6) derive session key
             hkdf_inst = hkdf.Hkdf('Pair-Verify-Encrypt-Salt'.encode(), shared_secret, hash=hashlib.sha512)
@@ -695,9 +695,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             tmp += encrypted_data_with_auth_tag[1]
 
             # 8) construct result tlv
-            d_res[TLV.kTLVType_State] = TLV.M2
-            d_res[TLV.kTLVType_PublicKey] = accessory_spk
-            d_res[TLV.kTLVType_EncryptedData] = tmp
+            d_res.append((TLV.kTLVType_State, TLV.M2,))
+            d_res.append((TLV.kTLVType_PublicKey, accessory_spk))
+            d_res.append((TLV.kTLVType_EncryptedData, tmp))
 
             self._send_response_tlv(d_res)
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
@@ -756,7 +756,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             self.server.sessions[self.session_id]['accessory_to_controller_key'] = accessory_to_controller_key
             self.server.sessions[self.session_id]['accessory_to_controller_count'] = 0
 
-            d_res[TLV.kTLVType_State] = TLV.M4
+            d_res.append((TLV.kTLVType_State, TLV.M4, ))
 
             self._send_response_tlv(d_res)
             if AccessoryRequestHandler.DEBUG_PAIR_VERIFY:
@@ -772,11 +772,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         session = self.server.sessions[self.session_id]
         server_data = self.server.data
 
-        d_res = {}
+        d_res = []
 
         if d_req[TLV.kTLVType_State] == TLV.M1 and d_req[TLV.kTLVType_Method] == TLV.AddPairing:
             self.log_message('Step #2 /pairings add pairing')
-            d_res[TLV.kTLVType_State] = TLV.M2
+            d_res.append((TLV.kTLVType_State, TLV.M2, ))
 
             # see page 51
             # 1)
@@ -801,7 +801,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 if registered_controller_LTPK != additional_controller_LTPK:
                     self.log_message('with different key')
                     # 3.a)
-                    d_res[TLV.kTLVType_Error] = TLV.kTLVError_Unknown
+                    d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Unknown, ))
                     self._send_response_tlv(d_res)
                 else:
                     self.log_message('with different permissions')
@@ -836,7 +836,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             server_data.remove_peer(d_req[TLV.kTLVType_Identifier])
             self.server.publish_device()
 
-            d_res[TLV.kTLVType_State] = TLV.M2
+            d_res.append((TLV.kTLVType_State, TLV.M2, ))
             self._send_response_tlv(d_res)
             self.log_message('after step #2\n%s', TLV.to_string(d_res))
 
@@ -900,10 +900,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         :param error: The error code as in TLV.kTLVError_*
         :return: None
         """
-        d_res = dict()
-        d_res[TLV.kTLVType_State] = state
-        d_res[TLV.kTLVType_Error] = error
-        result_bytes = TLV.encode_dict(d_res)
+        d_res = [
+            (TLV.kTLVType_State, state),
+            (TLV.kTLVType_Error, error)
+        ]
+        result_bytes = TLV.encode_list(d_res)
 
         self.send_response(HttpStatusCodes.METHOD_NOT_ALLOWED)
         # Send headers
@@ -917,7 +918,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         d_req = TLV.decode_bytes(self.body)
         self.log_message('POST /pair-setup request body:\n%s', TLV.to_string(d_req))
 
-        d_res = {}
+        d_res = []
 
         if d_req[TLV.kTLVType_State] == TLV.M1:
             # step #2 Accessory -> iOS Device SRP Start Response
@@ -954,9 +955,9 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             public_key = server.get_public_key()
 
             # 10) create response tlv and send response
-            d_res[TLV.kTLVType_State] = TLV.M2
-            d_res[TLV.kTLVType_PublicKey] = SrpServer.to_byte_array(public_key)
-            d_res[TLV.kTLVType_Salt] = SrpServer.to_byte_array(salt)
+            d_res.append((TLV.kTLVType_State, TLV.M2,))
+            d_res.append((TLV.kTLVType_PublicKey, SrpServer.to_byte_array(public_key),))
+            d_res.append((TLV.kTLVType_Salt, SrpServer.to_byte_array(salt),))
             self._send_response_tlv(d_res)
 
             # store session
@@ -981,8 +982,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             # 2) verify ios proof
             ios_proof = gmpy2.mpz(binascii.hexlify(d_req[TLV.kTLVType_Proof]), 16)
             if not server.verify_clients_proof(ios_proof):
-                d_res[TLV.kTLVType_State] = TLV.M4
-                d_res[TLV.kTLVType_Error] = TLV.kTLVError_Authentication
+                d_res.append((TLV.kTLVType_State,  TLV.M4, ))
+                d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))
 
                 self._send_response_tlv(d_res)
                 print('error in step #4', d_res, self.server.sessions)
@@ -994,8 +995,8 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             accessory_proof = server.get_proof(ios_proof)
 
             # 4) create response tlv
-            d_res[TLV.kTLVType_State] = TLV.M4
-            d_res[TLV.kTLVType_Proof] = SrpServer.to_byte_array(accessory_proof)
+            d_res.append((TLV.kTLVType_State, TLV.M4, ))
+            d_res.append((TLV.kTLVType_Proof, SrpServer.to_byte_array(accessory_proof), ))
 
             # 5) send response tlv
             self._send_response_tlv(d_res)
@@ -1070,12 +1071,12 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             accessory_signature = accessory_ltsk.sign(accessory_info)
 
             # 5) construct sub_tlv
-            sub_tlv = {
-                TLV.kTLVType_Identifier: self.server.data.accessory_pairing_id_bytes,
-                TLV.kTLVType_PublicKey: accessory_ltpk,
-                TLV.kTLVType_Signature: accessory_signature
-            }
-            sub_tlv_b = TLV.encode_dict(sub_tlv)
+            sub_tlv = [
+                (TLV.kTLVType_Identifier, self.server.data.accessory_pairing_id_bytes),
+                (TLV.kTLVType_PublicKey, accessory_ltpk),
+                (TLV.kTLVType_Signature, accessory_signature)
+            ]
+            sub_tlv_b = TLV.encode_list(sub_tlv)
 
             # 6) encrypt sub_tlv
             encrypted_data_with_auth_tag = chacha20_aead_encrypt(bytes(),
@@ -1088,9 +1089,10 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 7) send response
             self.server.publish_device()
-            d_res = dict()
-            d_res[TLV.kTLVType_State] = TLV.M6
-            d_res[TLV.kTLVType_EncryptedData] = tmp
+            d_res = [
+                (TLV.kTLVType_State, TLV.M6,),
+                (TLV.kTLVType_EncryptedData, tmp, )
+            ]
 
             self._send_response_tlv(d_res)
             self.log_message('after step #6:\n%s', TLV.to_string(d_res))
@@ -1099,7 +1101,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HttpStatusCodes.METHOD_NOT_ALLOWED)
 
     def _send_response_tlv(self, d_res, close=False, status=HttpStatusCodes.OK):
-        result_bytes = TLV.encode_dict(d_res)
+        result_bytes = TLV.encode_list(d_res)
 
         self.send_response(status)
         # Send headers
