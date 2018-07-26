@@ -85,19 +85,18 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
     # Step #3 ios --> accessory (send SRP verify request) (see page 41)
     #
-    assert TLV.kTLVType_State in response_tlv, response_tlv
-    assert response_tlv[TLV.kTLVType_State] == TLV.M2
+    assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M2
 
     # the errors here can be:
     #  * kTLVError_Unavailable: Device is paired
     #  * kTLVError_MaxTries: More than 100 unsuccessfull attempts
     #  * kTLVError_Busy: There is already a pairing going on
-    if TLV.kTLVType_Error in response_tlv:
-        error_handler(response_tlv[TLV.kTLVType_Error], "step 3")
+    if response_tlv[1][0] == TLV.kTLVType_Error:
+        error_handler(response_tlv[1][1], 'step 3')
 
     srp_client = SrpClient('Pair-Setup', pin)
-    srp_client.set_salt(response_tlv[TLV.kTLVType_Salt])
-    srp_client.set_server_public_key(response_tlv[TLV.kTLVType_PublicKey])
+    srp_client.set_salt(response_tlv[2][1])
+    srp_client.set_server_public_key(response_tlv[1][1])
     client_pub_key = srp_client.get_public_key()
     client_proof = srp_client.get_proof()
 
@@ -116,13 +115,12 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
 
     # M4 Verification (page 43)
-    assert TLV.kTLVType_State in response_tlv, response_tlv
-    assert response_tlv[TLV.kTLVType_State] == TLV.M4
-    if TLV.kTLVType_Error in response_tlv:
-        error_handler(response_tlv[TLV.kTLVType_Error], "step 5")
+    assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M4
+    if response_tlv[1][0] == TLV.kTLVType_Error:
+        error_handler(response_tlv[1][1], 'step 5')
 
-    assert TLV.kTLVType_Proof in response_tlv
-    if not srp_client.verify_servers_proof(response_tlv[TLV.kTLVType_Proof]):
+    assert response_tlv[1][0] == TLV.kTLVType_Proof
+    if not srp_client.verify_servers_proof(response_tlv[1][1]):
         print('Step #5: wrong proof!')
 
     # M5 Request generation (page 44)
@@ -174,25 +172,27 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     #
     # Step #7 ios (Verification) (page 47)
     #
-    assert response_tlv[TLV.kTLVType_State] == TLV.M6
-    if TLV.kTLVType_Error in response_tlv:
-        error_handler(response_tlv[TLV.kTLVType_Error], "step 7")
+    assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M6
+    if response_tlv[1][0] == TLV.kTLVType_Error:
+        error_handler(response_tlv[1][1], 'step 7')
 
-    assert TLV.kTLVType_EncryptedData in response_tlv
+    assert response_tlv[1][0] == TLV.kTLVType_EncryptedData
     decrypted_data = chacha20_aead_decrypt(bytes(), session_key, 'PS-Msg06'.encode(), bytes([0, 0, 0, 0]),
-                                           response_tlv[TLV.kTLVType_EncryptedData])
+                                           response_tlv[1][1])
     if decrypted_data == False:
-        raise homekit.exception.IllegalData("step 7")
+        raise homekit.exception.IllegalData('step 7')
 
     response_tlv = TLV.decode_bytearray(decrypted_data)
-    assert TLV.kTLVType_Signature in response_tlv
-    accessory_sig = response_tlv[TLV.kTLVType_Signature]
 
-    assert TLV.kTLVType_Identifier in response_tlv
-    accessory_pairing_id = response_tlv[TLV.kTLVType_Identifier]
+    assert response_tlv[2][0] == TLV.kTLVType_Signature
+    accessory_sig = response_tlv[2][1]
 
-    assert TLV.kTLVType_PublicKey in response_tlv
-    accessory_ltpk = response_tlv[TLV.kTLVType_PublicKey]
+    assert response_tlv[0][0] == TLV.kTLVType_Identifier
+    accessory_pairing_id = response_tlv[0][1]
+
+    assert response_tlv[1][0] == TLV.kTLVType_PublicKey
+    accessory_ltpk = response_tlv[1][1]
+
     hkdf_inst = hkdf.Hkdf('Pair-Setup-Accessory-Sign-Salt'.encode(),
                           SrpClient.to_byte_array(srp_client.get_session_key()),
                           hash=hashlib.sha512)
@@ -200,15 +200,15 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
 
     accessory_info = accessory_x + accessory_pairing_id + accessory_ltpk
 
-    e25519s = ed25519.VerifyingKey(bytes(response_tlv[TLV.kTLVType_PublicKey]))
+    e25519s = ed25519.VerifyingKey(bytes(response_tlv[1][1]))
     try:
         e25519s.verify(bytes(accessory_sig), bytes(accessory_info))
     except AssertionError:
         raise InvalidSignatureError('step #7')
 
     return {
-        'AccessoryPairingID': response_tlv[TLV.kTLVType_Identifier].decode(),
-        'AccessoryLTPK': hexlify(response_tlv[TLV.kTLVType_PublicKey]).decode(),
+        'AccessoryPairingID': response_tlv[0][1].decode(),
+        'AccessoryLTPK': hexlify(response_tlv[1][1]).decode(),
         'iOSPairingId': ios_pairing_id,
         'iOSDeviceLTSK': ios_device_ltsk.to_ascii(encoding='hex').decode(),
         'iOSDeviceLTPK': hexlify(ios_device_ltpk.to_bytes()).decode()
@@ -248,13 +248,12 @@ def get_session_keys(conn, pairing_data):
     #
     # Step #3 ios --> accessory (send SRP verify request)  (page 49)
     #
-    assert TLV.kTLVType_State in response_tlv, response_tlv
-    assert response_tlv[TLV.kTLVType_State] == TLV.M2
-    assert TLV.kTLVType_PublicKey in response_tlv, response_tlv
-    assert TLV.kTLVType_EncryptedData in response_tlv, response_tlv
+    assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M2
+    assert response_tlv[1][0] == TLV.kTLVType_PublicKey, response_tlv
+    assert response_tlv[2][0] == TLV.kTLVType_EncryptedData, response_tlv
 
     # 1) generate shared secret
-    accessorys_session_pub_key_bytes = response_tlv[TLV.kTLVType_PublicKey]
+    accessorys_session_pub_key_bytes = response_tlv[1][1]
     shared_secret = ios_key.get_ecdh_key(
         py25519.Key25519(pubkey=bytes(accessorys_session_pub_key_bytes), verifyingkey=bytes()))
 
@@ -263,29 +262,29 @@ def get_session_keys(conn, pairing_data):
     session_key = hkdf_inst.expand('Pair-Verify-Encrypt-Info'.encode(), 32)
 
     # 3) verify auth tag on encrypted data and 4) decrypt
-    encrypted = response_tlv[TLV.kTLVType_EncryptedData]
+    encrypted = response_tlv[2][1]
     decrypted = chacha20_aead_decrypt(bytes(), session_key, 'PV-Msg02'.encode(), bytes([0, 0, 0, 0]),
                                       encrypted)
     if type(decrypted) == bool and not decrypted:
-        raise InvalidAuthTagError("step 3")
+        raise InvalidAuthTagError('step 3')
     d1 = TLV.decode_bytes(decrypted)
-    assert TLV.kTLVType_Identifier in d1
-    assert TLV.kTLVType_Signature in d1
+    assert d1[0][0] == TLV.kTLVType_Identifier
+    assert d1[1][0] == TLV.kTLVType_Signature
 
     # 5) look up pairing by accessory name
-    accessory_name = d1[TLV.kTLVType_Identifier].decode()
+    accessory_name = d1[0][1].decode()
 
     if pairing_data['AccessoryPairingID'] != accessory_name:
-        raise IncorrectPairingIdError("step 3")
+        raise IncorrectPairingIdError('step 3')
 
     accessory_ltpk = py25519.Key25519(pubkey=bytes(), verifyingkey=bytes.fromhex(pairing_data['AccessoryLTPK']))
 
     # 6) verify accessory's signature
-    accessory_sig = d1[TLV.kTLVType_Signature]
-    accessory_session_pub_key_bytes = response_tlv[TLV.kTLVType_PublicKey]
+    accessory_sig = d1[1][1]
+    accessory_session_pub_key_bytes = response_tlv[1][1]
     accessory_info = accessory_session_pub_key_bytes + accessory_name.encode() + ios_key.pubkey
     if not accessory_ltpk.verify(bytes(accessory_sig), bytes(accessory_info)):
-        raise InvalidSignatureError("step 3")
+        raise InvalidSignatureError('step 3')
 
     # 7) create iOSDeviceInfo
     ios_device_info = ios_key.pubkey + pairing_data['iOSPairingId'].encode() + accessorys_session_pub_key_bytes
@@ -321,10 +320,9 @@ def get_session_keys(conn, pairing_data):
     #
     #   Post Step #4 verification (page 51)
     #
-    if TLV.kTLVType_Error in response_tlv:
-        error_handler(response_tlv[TLV.kTLVType_Error], "verification")
-    assert TLV.kTLVType_State in response_tlv
-    assert response_tlv[TLV.kTLVType_State] == TLV.M4
+    assert response_tlv[0][0] == TLV.kTLVType_State and response_tlv[0][1] == TLV.M4
+    if len(response_tlv)==2 and response_tlv[1][0] == TLV.kTLVType_Error:
+        error_handler(response_tlv[1][1] , 'verification')
 
     # calculate session keys
     hkdf_inst = hkdf.Hkdf('Control-Salt'.encode(), shared_secret, hash=hashlib.sha512)

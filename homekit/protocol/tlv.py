@@ -65,35 +65,11 @@ class TLV:
     kTLVError_Busy = bytearray(b'\x07')
 
     @staticmethod
-    def decode_bytes(bs) -> dict:
+    def decode_bytes(bs) -> list:
         return TLV.decode_bytearray(bytearray(bs))
 
     @staticmethod
-    def decode_bytearray(ba: bytearray) -> dict:
-        result = {}
-        # do not influence caller!
-        tail = ba.copy()
-        while len(tail) > 0:
-            key = tail.pop(0)
-            length = tail.pop(0)
-            value = tail[:length]
-            if length != len(value):
-                raise TlvParseException('Not enough data for length {}'.format(length))
-            tail = tail[length:]
-
-            if key not in result:
-                result[key] = value
-            else:
-                for b in value:
-                    result[key].append(b)
-        return result
-
-    @staticmethod
-    def decode_bytes_to_list(bs) -> list:
-        return TLV.decode_bytearray_to_list(bytearray(bs))
-
-    @staticmethod
-    def decode_bytearray_to_list(ba: bytearray) -> list:
+    def decode_bytearray(ba: bytearray) -> list:
         result = []
         # do not influence caller!
         tail = ba.copy()

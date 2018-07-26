@@ -222,7 +222,7 @@ class Controller(object):
         data = response.read()
         data = TLV.decode_bytes(data)
         # handle the result, spec says, if it has only one entry with state == M2 we unpaired, else its an error.
-        if len(data) == 1 and data[TLV.kTLVType_State] == TLV.M2:
+        if len(data) == 1 and data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2:
             del self.pairings[alias]
         else:
             if data[TLV.kTLVType_Error] == TLV.kTLVError_Authentication:
@@ -295,7 +295,7 @@ class Pairing(object):
         ])
         response = self.session.sec_http.post('/pairings', request_tlv.decode())
         data = response.read()
-        data = TLV.decode_bytes_to_list(data)
+        data = TLV.decode_bytes(data)
 
         if not (data[0][0] == TLV.kTLVType_State and data[0][1] == TLV.M2):
             raise UnknownError('unexpected data received: ' + str(data))

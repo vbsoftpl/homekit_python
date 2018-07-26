@@ -27,7 +27,7 @@ class TestTLV(unittest.TestCase):
             [TLV.kTLVType_Certificate, (300 * 'a').encode()],
             [TLV.kTLVType_Identifier, 'hello'.encode()],
         ]
-        res = TLV.decode_bytearray_to_list(TLV.encode_list(val))
+        res = TLV.decode_bytearray(TLV.encode_list(val))
         self.assertEqual(val, res)
 
     def test_long_values_2(self):
@@ -36,7 +36,7 @@ class TestTLV(unittest.TestCase):
             [TLV.kTLVType_Certificate, (150 * 'a' + 150 * 'b').encode()],
             [TLV.kTLVType_Identifier, 'hello'.encode()],
         ]
-        res = TLV.decode_bytearray_to_list(TLV.encode_list(val))
+        res = TLV.decode_bytearray(TLV.encode_list(val))
         self.assertEqual(val, res)
 
     def test_long_values_decode_bytearray_to_list(self):
@@ -47,7 +47,7 @@ class TestTLV(unittest.TestCase):
             [1, bytearray(b'hello')]
         ]
 
-        data = TLV.decode_bytearray_to_list(example)
+        data = TLV.decode_bytearray(example)
         self.assertListEqual(data, expected)
 
     def test_long_values_decode_bytes_to_list(self):
@@ -58,47 +58,31 @@ class TestTLV(unittest.TestCase):
             [1, bytearray(b'hello')]
         ]
 
-        data = TLV.decode_bytes_to_list(example)
+        data = TLV.decode_bytes(example)
         self.assertListEqual(data, expected)
 
-    def test_long_values_decode_bytearray(self):
-        example = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
-        expected = {
-            6: bytearray(b'\x03'),
-            9: bytearray(300 * b'a'),
-            1: bytearray(b'hello')
-        }
-
-        data = TLV.decode_bytearray(example)
-        self.assertDictEqual(data, expected)
-
-    def test_long_values_decode_bytes(self):
-        example = bytes(bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f'))
-
-        expected = {
-            6: bytearray(b'\x03'),
-            9: bytearray(300 * b'a'),
-            1: bytearray(b'hello')
-        }
-
-        data = TLV.decode_bytes(example)
-        self.assertDictEqual(data, expected)
-
-    def test_decode_bytearray_not_enough_data(self):
-        example = bytearray.fromhex('060103' + '09FF' + 25 * '61')  # should have been 255 '61'
-        self.assertRaises(TlvParseException, TLV.decode_bytearray, example)
-
-    def test_decode_bytes_not_enough_data(self):
-        example = bytes(bytearray.fromhex('060103' + '09FF' + 25 * '61'))  # should have been 255 '61'
-        self.assertRaises(TlvParseException, TLV.decode_bytes, example)
+    # def test_long_values_decode_bytearray(self):
+    #     example = bytearray.fromhex('060103' + ('09FF' + 255 * '61' + '092D' + 45 * '61') + '010568656c6c6f')
+    #     expected = {
+    #         6: bytearray(b'\x03'),
+    #         9: bytearray(300 * b'a'),
+    #         1: bytearray(b'hello')
+    #     }
+    #
+    #     data = TLV.decode_bytearray(example)
+    #     self.assertDictEqual(data, expected)
+    #
+    # def test_decode_bytearray_not_enough_data(self):
+    #     example = bytearray.fromhex('060103' + '09FF' + 25 * '61')  # should have been 255 '61'
+    #     self.assertRaises(TlvParseException, TLV.decode_bytearray, example)
 
     def test_decode_bytearray_to_list_not_enough_data(self):
         example = bytearray.fromhex('060103' + '09FF' + 25 * '61')  # should have been 255 '61'
-        self.assertRaises(TlvParseException, TLV.decode_bytearray_to_list, example)
+        self.assertRaises(TlvParseException, TLV.decode_bytearray, example)
 
     def test_decode_bytes_to_list_not_enough_data(self):
         example = bytes(bytearray.fromhex('060103' + '09FF' + 25 * '61'))  # should have been 255 '61'
-        self.assertRaises(TlvParseException, TLV.decode_bytes_to_list, example)
+        self.assertRaises(TlvParseException, TLV.decode_bytes, example)
 
     def test_encode_list_key_error(self):
         example = [(-1, 'hello',), ]
@@ -130,7 +114,7 @@ class TestTLV(unittest.TestCase):
             TLV.kTLVType_Separator_Pair,
             [TLV.kTLVType_State, TLV.M4],
         ]
-        res = TLV.decode_bytearray_to_list(TLV.encode_list(val))
+        res = TLV.decode_bytearray(TLV.encode_list(val))
         self.assertEqual(val, res)
 
     def test_separator_list_error(self):
