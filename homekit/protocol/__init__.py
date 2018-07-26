@@ -121,7 +121,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
 
     assert response_tlv[1][0] == TLV.kTLVType_Proof
     if not srp_client.verify_servers_proof(response_tlv[1][1]):
-        print('Step #5: wrong proof!')
+        raise AuthenticationError('Step #5: wrong proof!')
 
     # M5 Request generation (page 44)
     session_key = srp_client.get_session_key()

@@ -718,7 +718,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                                               encrypted)
             if decrypted == False:
                 self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
-                print('error in step #4: authtag', d_res, self.server.sessions)
+                self.log_error('error in step #4: authtag %s %s', d_res, self.server.sessions)
                 return
             d1 = TLV.decode_bytes(decrypted)
             assert d1[0][0] == TLV.kTLVType_Identifier
@@ -730,7 +730,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             ios_device_ltpk_bytes = self.server.data.get_peer_key(ios_device_pairing_id)
             if ios_device_ltpk_bytes is None:
                 self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
-                print('error in step #4: not paired', d_res, self.server.sessions)
+                self.log_error('error in step #4: not paired %s %s', d_res, self.server.sessions)
                 return
             ios_device_ltpk = py25519.Key25519(pubkey=bytes(), verifyingkey=ios_device_ltpk_bytes)
 
@@ -741,7 +741,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             ios_device_info = ios_device_curve25519_pub_key_bytes + ios_device_pairing_id + accessory_spk
             if not ios_device_ltpk.verify(bytes(ios_device_sig), bytes(ios_device_info)):
                 self.send_error_reply(TLV.M4, TLV.kTLVError_Authentication)
-                print('error in step #4: signature', d_res, self.server.sessions)
+                self.log_error('error in step #4: signature %s %s', d_res, self.server.sessions)
                 return
 
             #
@@ -831,7 +831,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             ios_device_pairing_id = session['ios_device_pairing_id']
             if not server_data.is_peer_admin(ios_device_pairing_id):
                 self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
-                print('error in step #2: admin bit')
+                self.log_error('error in step #2: admin bit')
                 return
 
             # 3) remove pairing and republish device
@@ -867,8 +867,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             ios_device_pairing_id = session['ios_device_pairing_id']
             if not server_data.is_peer_admin(ios_device_pairing_id):
                 self.send_error_reply(TLV.M2, TLV.kTLVError_Authentication)
-                # TODO remove print
-                print('error in step #2: admin bit')
+                self.log_error('error in step #2: admin bit')
                 return
 
             # 3) construct response TLV
@@ -990,7 +989,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication,))
 
                 self._send_response_tlv(d_res)
-                print('error in step #4', d_res, self.server.sessions)
+                self.log_error('error in step #4 %s %s', d_res, self.server.sessions)
                 return
             else:
                 self.log_message('ios proof was verified')
@@ -1025,7 +1024,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
                 d_res.append((TLV.kTLVType_Error, TLV.kTLVError_Authentication, ))
 
                 self.send_error_reply(TLV.M6, TLV.kTLVError_Authentication)
-                print('error in step #6', d_res, self.server.sessions)
+                self.log_error('error in step #6 %s %s', d_res, self.server.sessions)
                 return
 
             d_req_2 = TLV.decode_bytearray(decrypted_data)
@@ -1047,7 +1046,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
             verify_key = py25519.Key25519(pubkey=bytes(), verifyingkey=bytes(ios_device_ltpk))
             if not verify_key.verify(bytes(ios_device_sig), bytes(ios_device_info)):
                 self.send_error_reply(TLV.M6, TLV.kTLVError_Authentication)
-                print('error in step #6', d_res, self.server.sessions)
+                self.log_error('error in step #6 %s %s', d_res, self.server.sessions)
                 return
 
             # 6) save ios_device_pairing_id and ios_device_ltpk
