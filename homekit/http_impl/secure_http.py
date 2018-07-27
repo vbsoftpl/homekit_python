@@ -125,7 +125,7 @@ class SecureHttp:
 
             # check if there is anything more to do
             if not data_ready and no_data_remaining:
-                continue
+                break
 
             self.sock.settimeout(0.1)
             data = self.sock.recv(exp_len)
