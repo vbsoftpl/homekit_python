@@ -41,17 +41,27 @@ if __name__ == '__main__':
     args = setup_args_parser()
 
     controller = Controller()
-    controller.load_data(args.file)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
+
     if args.alias not in controller.get_pairings():
         print('"{a}" is no known alias'.format(a=args.alias))
-        exit(-1)
+        sys.exit(-1)
 
-    pairing = controller.get_pairings()[args.alias]
+    try:
+        pairing = controller.get_pairings()[args.alias]
 
-    characteristics = [(int(c[0].split('.')[0]),  # the first part is the aid, must be int
-                        int(c[0].split('.')[1]),  # the second part is the iid, must be int
-                        c[1]) for c in args.characteristics]
-    results = pairing.put_characteristics(characteristics, do_conversion=True)
+        characteristics = [(int(c[0].split('.')[0]),  # the first part is the aid, must be int
+                            int(c[0].split('.')[1]),  # the second part is the iid, must be int
+                            c[1]) for c in args.characteristics]
+        results = pairing.put_characteristics(characteristics, do_conversion=True)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
+
     for key, value in results.items():
         aid = key[0]
         iid = key[1]

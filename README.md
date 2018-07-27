@@ -6,7 +6,7 @@ HomeKit Controller.
 **Limitations**
 
  * This code only works with HomeKit IP Accessories. no Bluetooth LE Accessories (yet)!
- * No reaction to events whatsoever.
+ * The simulated Controller can handle events, but the Accessory is missing this feature
 
 The code presented in this repository was created based on release R1 from 2017-06-07.
 
@@ -114,14 +114,27 @@ Hints:
 This tool will use the Identify Routine of a HomeKit IP Accessory.
 
 Usage:
+
+Identify an unpaired device by its id:
 ```bash
 python3 -m homekit.identify -d ${DEVICEID} 
 ```
 
+The option `-d` specifies the device id of the accessory to identify. Can be obtained via discovery.
+
+
+Identify a paired device via controller file and alias:
+```bash
+python3 -m homekit.identify -f ${CONTROLLERFILE} -a ${ALIAS}
+```
+
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
+
 Output:
 
-Either *identify succeeded.* or *identify failed* followed by a reason (see table 5-12 page 80). 
-One of the most common reasons is a already paired device.
+Either a success message or an error message.
 
 ## pair.py
 

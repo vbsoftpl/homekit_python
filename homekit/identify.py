@@ -48,14 +48,20 @@ def setup_args_parser():
 if __name__ == '__main__':
     args = setup_args_parser()
 
-    controller = Controller()
-    if args.device:
-        controller.identify(args.device)
-    else:
-        controller.load_data(args.file)
-        if args.alias not in controller.get_pairings():
-            print('"{a}" is no known alias'.format(a=args.alias))
-            exit(-1)
+    try:
+        controller = Controller()
+        if args.device:
+            controller.identify(args.device)
+        else:
+            controller.load_data(args.file)
+            if args.alias not in controller.get_pairings():
+                print('"{a}" is no known alias'.format(a=args.alias))
+                sys.exit(-1)
 
-        pairing = controller.get_pairings()[args.alias]
-        pairing.identify()
+            pairing = controller.get_pairings()[args.alias]
+            if not pairing.identify():
+                print('identification was not called successfully.')
+        print('identification was called successfully.')
+    except Exception as e:
+        print(e)
+        sys.exit(-1)

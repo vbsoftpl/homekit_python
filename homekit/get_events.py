@@ -17,7 +17,7 @@
 #
 
 import argparse
-
+import sys
 from homekit.controller import Controller
 
 
@@ -43,14 +43,23 @@ def func(events):
 if __name__ == '__main__':
     args = setup_args_parser()
     controller = Controller()
-    controller.load_data(args.file)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
+
     if args.alias not in controller.get_pairings():
         print('"{a}" is no known alias'.format(a=args.alias))
-        exit(-1)
+        sys.exit(-1)
 
-    pairing = controller.get_pairings()[args.alias]
-    characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
-    results = pairing.get_events(characteristics, func, max_events=args.eventCount, max_seconds=args.secondsCount)
+    try:
+        pairing = controller.get_pairings()[args.alias]
+        characteristics = [(int(c.split('.')[0]), int(c.split('.')[1])) for c in args.characteristics]
+        results = pairing.get_events(characteristics, func, max_events=args.eventCount, max_seconds=args.secondsCount)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
     for key, value in results.items():
         aid = key[0]
         iid = key[1]

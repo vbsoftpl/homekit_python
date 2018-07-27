@@ -17,6 +17,7 @@
 #
 
 import argparse
+import sys
 from homekit.controller import Controller
 
 
@@ -34,13 +35,22 @@ if __name__ == '__main__':
     args = setup_args_parser()
 
     controller = Controller()
-    controller.load_data(args.file)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
+
     if args.alias in controller.get_pairings():
         print('"{a}" is a already known alias'.format(a=args.alias))
-        exit(-1)
+        sys.exit(-1)
 
-    controller.perform_pairing(args.alias, args.device, args.pin)
-    pairing = controller.get_pairings()[args.alias]
-    pairing.get_accessories()
-    controller.save_data(args.file)
-    print('Pairing for {a} was established.'.format(a=args.alias))
+    try:
+        controller.perform_pairing(args.alias, args.device, args.pin)
+        pairing = controller.get_pairings()[args.alias]
+        pairing.get_accessories()
+        controller.save_data(args.file)
+        print('Pairing for {a} was established.'.format(a=args.alias))
+    except Exception as e:
+        print(e)
+        sys.exit(-1)

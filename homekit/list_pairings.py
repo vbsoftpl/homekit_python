@@ -17,7 +17,7 @@
 #
 
 import argparse
-
+import sys
 from homekit.controller import Controller
 
 
@@ -31,13 +31,22 @@ def setup_args_parser():
 if __name__ == '__main__':
     args = setup_args_parser()
     controller = Controller()
-    controller.load_data(args.file)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
+
     if args.alias not in controller.get_pairings():
         print('"{a}" is no known alias'.format(a=args.alias))
-        exit(-1)
+        sys.exit(-1)
 
-    pairing = controller.get_pairings()[args.alias]
-    pairings = pairing.list_pairings()
+    try:
+        pairing = controller.get_pairings()[args.alias]
+        pairings = pairing.list_pairings()
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
 
     for pairing in pairings:
         print('Pairing Id: {id}'.format(id=pairing['pairingId']))

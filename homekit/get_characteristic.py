@@ -17,6 +17,7 @@
 #
 
 import json
+import sys
 import argparse
 
 from homekit.controller import Controller
@@ -44,19 +45,28 @@ if __name__ == '__main__':
     args = setup_args_parser()
 
     controller = Controller()
-    controller.load_data(args.file)
+    try:
+        controller.load_data(args.file)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
+
     if args.alias not in controller.get_pairings():
         print('"{a}" is no known alias'.format(a=args.alias))
-        exit(-1)
+        sys.exit(-1)
 
-    pairing = controller.get_pairings()[args.alias]
+    try:
+        pairing = controller.get_pairings()[args.alias]
 
-    # convert the command line parameters to the required form
-    characteristics = [(c.split('.')) for c in args.characteristics]
+        # convert the command line parameters to the required form
+        characteristics = [(c.split('.')) for c in args.characteristics]
 
-    # get the data
-    data = pairing.get_characteristics(characteristics, include_meta=args.meta, include_perms=args.perms,
-                                       include_type=args.type, include_events=args.events)
+        # get the data
+        data = pairing.get_characteristics(characteristics, include_meta=args.meta, include_perms=args.perms,
+                                           include_type=args.type, include_events=args.events)
+    except Exception as e:
+        print(e)
+        sys.exit(-1)
 
     # print the data
     tmp = {}
