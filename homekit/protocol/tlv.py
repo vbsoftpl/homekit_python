@@ -19,6 +19,7 @@ class TLV:
     """
     as described in Appendix 12 (page 251)
     """
+    DEBUG = False
 
     # Steps
     M1 = bytearray(b'\x01')
@@ -85,6 +86,8 @@ class TLV:
                 result[-1][1] += value
             else:
                 result.append([key, value])
+        if TLV.DEBUG:
+            print('receiving ' + TLV.to_string(result))
         return result
 
     @staticmethod
@@ -101,6 +104,8 @@ class TLV:
 
     @staticmethod
     def encode_list(d: list) -> bytearray:
+        if TLV.DEBUG:
+            print('sending ' + TLV.to_string(d))
         result = bytearray()
         for p in d:
             (key, value) = p
@@ -136,14 +141,35 @@ class TLV:
         if isinstance(d, dict):
             res = '{\n'
             for k in d.keys():
-                res += '  {k}: {v}\n'.format(k=k, v=d[k])
+                res += '  {k}: ({l} bytes) {v}\n'.format(k=k, v=d[k], l=len(d[k]))
             res += '}\n'
         else:
             res = '[\n'
             for k in d:
-                res += '  {k}: {v}\n'.format(k=k[0], v=k[1])
+                res += '  {k}: ({l} bytes) {v}\n'.format(k=k[0], v=k[1], l=len(k[1]))
             res += ']\n'
         return res
+
+
+    @staticmethod
+    def reorder(tlv_array, preferred_order):
+        """
+        This function is used to reorder the key value pairs of a TLV list according to a preferred order. If key from
+        the preferred_order list is not found, it is ignored. If a pair's key is not in the preferred order list it is
+        ignored as well.
+
+        It is mostly used, if some accessory does not respect the order mentioned in the specification.
+
+        :param tlv_array: a list of tupels containing key and value of the TLV
+        :param preferred_order: a list of keys describing how the key value pairs should be sorted.
+        :return: a TLV list containing only pairs whose key was in the preferred order list sorted by that order.
+        """
+        tmp = []
+        for key in preferred_order:
+            for item in tlv_array:
+                if item[0] == key:
+                    tmp.append(item)
+        return tmp
 
 
 class TlvParseException(Exception):
