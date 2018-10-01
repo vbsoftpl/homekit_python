@@ -48,6 +48,31 @@ class CollectingListener(object):
         return self.data
 
 
+def get_from_properties(props, key, default=None, case_sensitive=True):
+    """
+    This function looks up the key in the given zeroconf service information properties. Those are a dict between bytes.
+    The key to lookup is therefore also of type bytes.
+    :param props: a dict from bytes to bytes.
+    :param key: bytes as key
+    :param default: the value to return, if the key was not found. Will be converted to str.
+    :param case_sensitive: If this is False, try to lookup keys also when they only match ignoring their case
+    :return: the value out of the dict as string (after decoding), the given default if the key was not not found but
+             the default was given or None
+    """
+    if case_sensitive:
+        tmp_props = props
+        tmp_key = key
+    else:
+        tmp_props = {k.lower(): props[k] for k in props}
+        tmp_key = key.lower()
+
+    if tmp_key in tmp_props:
+        return tmp_props[tmp_key].decode()
+    else:
+        if default:
+            return str(default)
+
+
 def discover_homekit_devices(max_seconds=10):
     """
     This method discovers all HomeKit Accessories. It browses for devices in the _hap._tcp.local. domain and checks if
@@ -69,46 +94,50 @@ def discover_homekit_devices(max_seconds=10):
             'port': info.port
         }
 
+        props = info.properties
+
         # stuff taken from the Bonjour TXT record (see table 5-7 on page 69)
-
-        if b'c#' not in info.properties:
-            continue
-        d['c#'] = info.properties[b'c#'].decode()
-
-        if b'ff' not in info.properties:
-            flags = 0
+        conf_number = get_from_properties(props, b'c#', case_sensitive=False)
+        if conf_number:
+            d['c#'] = conf_number
         else:
-            flags = int(info.properties[b'ff'].decode())
+            continue
+
+        ff = get_from_properties(props, b'ff', case_sensitive=False)
+        if ff:
+            flags = int(ff)
+        else:
+            flags = 0
         d['ff'] = flags
         d['flags'] = FeatureFlags[flags]
 
-        if b'id' not in info.properties:
-            continue
-        d['id'] = info.properties[b'id'].decode()
+        id = get_from_properties(props, b'id', case_sensitive=False)
+        if id:
+            d['id'] = id
 
-        if b'md' not in info.properties:
-            continue
-        d['md'] = info.properties[b'md'].decode()
-
-        if b'pv' in info.properties:
-            d['pv'] = info.properties[b'pv'].decode()
+        md = get_from_properties(props, b'md', case_sensitive=False)
+        if md:
+            d['md'] = md
         else:
-            d['pv'] = '1.0'
-
-        if b's#' not in info.properties:
             continue
-        d['s#'] = info.properties[b's#'].decode()
 
-        if b'sf' not in info.properties:
-            d['sf'] = 0
-        else:
-            d['sf'] = info.properties[b'sf'].decode()
+        pv = get_from_properties(props, b'pv', case_sensitive=False, default='1.0')
+        if pv:
+            d['pv'] = pv
 
-        if b'ci' not in info.properties:
-            continue
-        category = info.properties[b'ci'].decode()
-        d['ci'] = category
-        d['category'] = Categories[int(category)]
+        s = get_from_properties(props, b's#', case_sensitive=False)
+        if s:
+            d['s#'] = s
+
+        sf = get_from_properties(props, b'sf', case_sensitive=False, default=0)
+        if sf:
+            d['sf'] = sf
+
+        ci = get_from_properties(props, b'ci', case_sensitive=False)
+        if ci:
+            category = info.properties[b'ci'].decode()
+            d['ci'] = category
+            d['category'] = Categories[int(category)]
 
         # append device, it has all data
         tmp.append(d)

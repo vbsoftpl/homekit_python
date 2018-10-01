@@ -18,8 +18,7 @@ import unittest
 from zeroconf import Zeroconf, ServiceInfo
 import socket
 
-
-from homekit.zeroconf_impl import find_device_ip_and_port, discover_homekit_devices
+from homekit.zeroconf_impl import find_device_ip_and_port, discover_homekit_devices, get_from_properties
 
 
 class TestZeroconf(unittest.TestCase):
@@ -102,3 +101,35 @@ class TestZeroconf(unittest.TestCase):
         zeroconf.unregister_all_services()
 
         self.assertIsNone(test_device)
+
+    def test_existing_key(self):
+        props = {b'c#': b'259'}
+        val = get_from_properties(props, b'c#')
+        self.assertEqual('259', val)
+
+    def test_non_existing_key_no_default(self):
+        props = {b'c#': b'259'}
+        val = get_from_properties(props, b's#')
+        self.assertEqual(None, val)
+
+    def test_non_existing_key_case_insensitive(self):
+        props = {b'C#': b'259', b'heLLo': b'World'}
+        val = get_from_properties(props, b'c#')
+        self.assertEqual(None, val)
+        val = get_from_properties(props, b'c#', case_sensitive=True)
+        self.assertEqual(None, val)
+        val = get_from_properties(props, b'c#', case_sensitive=False)
+        self.assertEqual('259', val)
+
+        val = get_from_properties(props, b'HEllo', case_sensitive=False)
+        self.assertEqual('World', val)
+
+    def test_non_existing_key_with_default(self):
+        props = {b'c#': b'259'}
+        val = get_from_properties(props, b's#', default='1')
+        self.assertEqual('1', val)
+
+    def test_non_existing_key_with_default_non_string(self):
+        props = {b'c#': b'259'}
+        val = get_from_properties(props, b's#', default=1)
+        self.assertEqual('1', val)
