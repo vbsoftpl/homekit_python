@@ -635,7 +635,7 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
     def _get_accessories(self):
 
-        result_bytes = self.server.accessories.__str__().encode()
+        result_bytes = self.server.accessories.to_accessory_and_service_list().encode()
         self.send_response(HttpStatusCodes.OK)
         self.send_header('Content-Type', 'application/hap+json')
         self.send_header('Content-Length', len(result_bytes))
@@ -844,14 +844,11 @@ class AccessoryRequestHandler(BaseHTTPRequestHandler):
 
             # 6) + 7) invalidate HAP session and close connections
             # TODO implement this in more details
-            # TODO remove prints
             #            for session_id in self.server.sessions:
             #                session = self.server.sessions[session_id]
             #                if session['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
-            #                    print('closing', session['handler'])
             #                    session['handler'].close_connection = True
             #
-            #                    print('closing', self.server.sessions[self.session_id]['handler'])
             #            if self.server.sessions[self.session_id]['ios_device_pairing_id'] == d_req[TLV.kTLVType_Identifier]:
             #                self.close_connection = True
             return

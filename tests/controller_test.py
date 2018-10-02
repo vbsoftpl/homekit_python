@@ -219,7 +219,11 @@ class TestControllerPaired(unittest.TestCase):
     def test_03_get_accessories(self):
         self.controller.load_data(TestControllerPaired.controller_file.name)
         pairing = self.controller.get_pairings()['alias']
-        result = pairing.get_accessories()
+        result = pairing.list_accessories_and_characteristics()
+        for characteristic in result[0]['services'][0]['characteristics']:
+            if characteristic['format'] == 'bool':
+                self.assertNotIn('maxDataLen', characteristic)
+                self.assertNotIn('maxLen', characteristic)
         self.assertEqual(1, len(result))
         result = result[0]
         self.assertIn('aid', result)

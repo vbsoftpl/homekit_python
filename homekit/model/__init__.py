@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import json
 from homekit.model.mixin import ToDictMixin, get_id
 from homekit.model.services import AccessoryInformationService, LightBulbService, FanService, \
     BHSLightBulbService, ThermostatService
@@ -47,6 +48,16 @@ class Accessory(ToDictMixin):
                     if isinstance(characteristic, IdentifyCharacteristic):
                         characteristic.set_set_value_callback(tmp)
 
+    def to_accessory_and_service_list(self):
+        l = []
+        for s in self.services:
+            l.append(s.to_accessory_and_service_list())
+        d = {
+            'aid': self.aid,
+            'services': l
+        }
+        return d
+
 
 class Accessories(ToDictMixin):
     def __init__(self):
@@ -54,3 +65,10 @@ class Accessories(ToDictMixin):
 
     def add_accessory(self, accessory: Accessory):
         self.accessories.append(accessory)
+
+    def to_accessory_and_service_list(self):
+        l = []
+        for a in self.accessories:
+            l.append(a.to_accessory_and_service_list())
+        d = {'accessories': l}
+        return json.dumps(d)

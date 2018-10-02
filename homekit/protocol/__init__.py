@@ -60,7 +60,7 @@ def perform_pair_setup(connection, pin, ios_pairing_id):
     :param ios_pairing_id: the id of the simulated ios device
     :return: a dict with the ios device's part of the pairing information
     :raises UnavailableError: if the device is already paired
-    :raises MaxTriesError: if the device received more than 100 unsuccessful attempts
+    :raises MaxTriesError: if the device received more than 100 unsuccessful pairing attempts
     :raises BusyError: if a parallel pairing is ongoing
     :raises AuthenticationError: if the verification of the device's SRP proof fails
     :raises MaxPeersError: if the device cannot accept an additional pairing

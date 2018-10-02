@@ -261,16 +261,18 @@ class Pairing(object):
         """
         return self.pairing_data
 
-    def get_accessories(self):
+    def list_accessories_and_characteristics(self):
         """
         This retrieves a current set of accessories and characteristics behind this pairing.
 
         :return: the accessory data as described in the spec on page 73 and following
+        :raises AccessoryNotFoundError: if the device can not be found via zeroconf
         """
         if not self.session:
             self.session = Session(self.pairing_data)
         response = self.session.get('/accessories')
-        accessories = json.loads(response.read().decode())['accessories']
+        tmp = response.read().decode()
+        accessories = json.loads(tmp)['accessories']
         self.pairing_data['accessories'] = accessories
         return accessories
 
@@ -286,6 +288,8 @@ class Pairing(object):
          * controllerType: either admin or regular
 
         :return: a list of dicts
+        :raises: UnknownError: if it receives unexpected data
+        :raises: UnpairedError: if the polled accessory is not paired
         """
         if not self.session:
             self.session = Session(self.pairing_data)
@@ -387,7 +391,7 @@ class Pairing(object):
         if not self.session:
             self.session = Session(self.pairing_data)
         if 'accessories' not in self.pairing_data:
-            self.get_accessories()
+            self.list_accessories_and_characteristics()
         data = []
         characteristics_set = set()
         for characteristic in characteristics:
@@ -490,7 +494,7 @@ class Pairing(object):
         if not self.session:
             self.session = Session(self.pairing_data)
         if 'accessories' not in self.pairing_data:
-            self.get_accessories()
+            self.list_accessories_and_characteristics()
 
         # we are looking for a characteristic of the identify type
         identify_type = CharacteristicsTypes.get_uuid(CharacteristicsTypes.IDENTIFY)

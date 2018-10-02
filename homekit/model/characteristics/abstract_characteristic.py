@@ -144,6 +144,33 @@ class AbstractCharacteristic(ToDictMixin):
         :return: a dict
         """
         tmp = {'format': self.format}
+        # TODO implement handling of already defined maxLen (upto 256!)
         if self.format == CharacteristicFormats.string:
             tmp['maxLen'] = 64
+        # TODO implement handling of other fields! eg maxDataLen
         return tmp
+
+    def to_accessory_and_service_list(self):
+        d = {
+            'type': self.type,
+            'iid': self.iid,
+            'value': self.value,
+            'perms': self.perms,
+            'format': self.format,
+        }
+        if self.ev:
+            d['ev'] = self.ev
+        if self.description:
+            d['description'] = self.description
+        if self.unit:
+            d['unit'] = self.unit
+        if self.minValue:
+            d['minValue'] = self.minValue
+        if self.maxValue:
+            d['maxValue'] = self.maxValue
+        if self.minStep:
+            d['minStep'] = self.minStep
+        if self.maxLen and self.format in [CharacteristicFormats.string]:
+            d['maxLen'] = self.maxLen
+
+        return d

@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     try:
         pairing = controller.get_pairings()[args.alias]
-        data = pairing.get_accessories()
+        data = pairing.list_accessories_and_characteristics()
     except Exception as e:
         print(e)
         sys.exit(-1)

@@ -133,7 +133,7 @@ package homekit {
 }
 
 class homekit.Pairing {
-    + get_accessories()
+    + list_accessories_and_characteristics()
     + get_characteristics(characteristics[], include_meta, include_perms, include_type, include_events)
     + get_events(characteristics[], callback_fun, max_events=-1, max_seconds=-1)
     + list_pairings()
