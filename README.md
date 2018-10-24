@@ -109,16 +109,29 @@ Hints:
 
 ## identify.py
 
-#TODO rework after identify.py was converted to controller
-
 This tool will use the Identify Routine of a HomeKit IP Accessory.
+
+### usage for unpaired device
 
 Usage:
 ```bash
-python3 -m homekit.identify -d ${DEVICEID} 
+python3 -m homekit.identify -d ${DEVICEID}
 ```
 
-Output:
+The option `-d` specifies the device id of the accessory to identify. Can be obtained via discovery.
+
+### usage for paired device
+
+Usage:
+```bash
+python3 -m homekit.identify -f ${PAIRINGDATAFILE} -a ${ALIAS}
+
+```
+The option `-f` specifies the file that contains the pairing data.
+
+The option `-a` specifies the alias for the device.
+
+### Output
 
 Either *identify succeeded.* or *identify failed* followed by a reason (see table 5-12 page 80). 
 One of the most common reasons is a already paired device.
