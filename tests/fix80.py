@@ -18,6 +18,7 @@
 
 import json
 import argparse
+import logging
 
 from homekit.controller import Controller
 from homekit.log_support import setup_logging, add_log_arguments
@@ -37,6 +38,8 @@ def setup_args_parser():
 
 if __name__ == '__main__':
     args = setup_args_parser()
+    setup_logging(args.loglevel)
+    logging.getLogger().setLevel(logging.INFO)
 
     controller = Controller(args.adapter)
     controller.load_data(args.file)
@@ -48,15 +51,18 @@ if __name__ == '__main__':
     del pairing.pairing_data['accessories']
 
     # without accessories in pairing data, this will trigger a load of the accessories and characteristics
+    logging.getLogger().setLevel(logging.DEBUG)
     data = pairing.list_accessories_and_characteristics()
 
     # restore the accessories data and establish a session by reading a characteristic
+    logging.getLogger().setLevel(logging.INFO)
     pairing.pairing_data['accessories'] = acc
     r = pairing.get_characteristics([(1, 4)])
 
     # remove accessories again and try to load the accessories and characteristics again
     del pairing.pairing_data['accessories']
-    setup_logging(args.loglevel)
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.debug(80 * '-')
     data = pairing.list_accessories_and_characteristics()
 
     print(json.dumps(data, indent=4))
