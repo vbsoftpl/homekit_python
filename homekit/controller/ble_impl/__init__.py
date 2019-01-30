@@ -66,12 +66,66 @@ class BlePairing(AbstractPairing):
         if 'accessories' in self.pairing_data:
             return self.pairing_data['accessories']
 
+            logger.debug('session: %s', self.session)
         manager = DeviceManager(adapter_name=self.adapter)
         device = manager.make_device(self.pairing_data['AccessoryMAC'])
         device.connect()
-        resolved_data = read_characteristics(device)
-        self.pairing_data['accessories'] = resolved_data['data']
-        return resolved_data['data']
+        if not self.session:
+            logger.debug('insecure connection')
+            resolved_data = read_characteristics(device)
+            self.pairing_data['accessories'] = resolved_data['data']
+            return resolved_data['data']
+        else:
+            logger.debug('secure connection')
+            for service in device.services:
+                logger.debug('service %s', service)
+                s_data = {
+                    'characteristics': [
+                    ],
+                    'iid': None
+                }
+
+                for characteristic in service.characteristics:
+                    if characteristic.uuid.upper() == CharacteristicsTypes.SERVICE_INSTANCE_ID:
+                        sid = int.from_bytes(characteristic.read_value(), byteorder='little')
+                        logger.debug('\t\tread service id %d', sid)
+                    else:
+                        c_data = {
+                            'iid': None,
+                            'type': characteristic.uuid.upper(),
+                            'perms': []
+                        }
+                        iid = None
+                        for descriptor in characteristic.descriptors:
+                            value = descriptor.read_value()
+                            if descriptor.uuid == CharacteristicInstanceID:
+                                iid = int.from_bytes(value, byteorder='little')
+                                logger.debug('\t\tread characteristic id %d', iid)
+                                c_data['iid'] = iid
+                            else:
+                                # print('\t\t', 'D', descriptor.uuid, value)
+                                pass
+                        if iid:
+                            v = iid.to_bytes(length=2, byteorder='little')
+                            tid = random.randrange(0, 255)
+                            response = self.session.request(characteristic, iid, HapBleOpCodes.CHAR_SIG_READ)
+                            if not response or len(response) == 0:
+                                logger.debug('EMPTY RESPONSE')
+                                continue
+                            logger.debug('response %s', response)
+                            response = [(k, response[k]) for k in response]
+                            logger.debug('response %s', response)
+                            d = parse_signature_tlv(response)
+                            logger.debug('d %s', d)
+                            for k in d:
+                                if k == 'service_type':
+                                    s_data['type'] = d[k].upper()
+                                elif k == 'sid':
+                                    s_data['iid'] = d[k]
+                                else:
+                                    c_data[k] = d[k]
+
+            return None
 
     def list_pairings(self):
         # TODO implementation still missing
@@ -608,6 +662,10 @@ def parse_sig_read_response(data, expected_tid):
     # parse tlvs and analyse information
     tlv = TLV.decode_bytes(data[5:])
 
+    return parse_signature_tlv(tlv)
+
+
+def parse_signature_tlv(tlv):
     description = ''
     characteristic_format = ''
     characteristic_range = None
@@ -655,7 +713,6 @@ def parse_sig_read_response(data, expected_tid):
             if characteristic_format == 'uint8':
                 characteristic_step = struct.unpack('B', t[1])[0]
             # TODO include all formats!
-
     # parse permissions
     # TODO refactor!
     perms = []
@@ -677,10 +734,8 @@ def parse_sig_read_response(data, expected_tid):
         perms.append('evc')
     if (chr_prop_int & 0x0100) > 0:
         perms.append('evd')
-
     result = {'description': description, 'perms': perms, 'format': characteristic_format, 'unit': unit,
               'range': characteristic_range, 'step': characteristic_step,
               'type': chr_type.upper(), 'sid': svc_id, 'service_type': svc_type}
     logger.debug('result: %s', str(result))
-
     return result

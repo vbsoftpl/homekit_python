@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     # without accessories in pairing data, this will trigger a load of the accessories and characteristics
     logging.getLogger().setLevel(logging.DEBUG)
-    data = pairing.list_accessories_and_characteristics()
+    # data = pairing.list_accessories_and_characteristics()
 
     # restore the accessories data and establish a session by reading a characteristic
     logging.getLogger().setLevel(logging.INFO)
