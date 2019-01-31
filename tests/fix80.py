@@ -66,4 +66,3 @@ if __name__ == '__main__':
     data = pairing.list_accessories_and_characteristics()
 
     print(json.dumps(data, indent=4))
-

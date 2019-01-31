@@ -77,6 +77,15 @@ class BlePairing(AbstractPairing):
             return resolved_data['data']
         else:
             logger.debug('secure connection')
+            a_data = {
+                'aid': 1,
+                'services': []
+            }
+
+            resolved_data = {
+                'data': [a_data],
+            }
+
             for service in device.services:
                 logger.debug('service %s', service)
                 s_data = {
@@ -106,26 +115,35 @@ class BlePairing(AbstractPairing):
                                 # print('\t\t', 'D', descriptor.uuid, value)
                                 pass
                         if iid:
-                            v = iid.to_bytes(length=2, byteorder='little')
-                            tid = random.randrange(0, 255)
-                            response = self.session.request(characteristic, iid, HapBleOpCodes.CHAR_SIG_READ)
-                            if not response or len(response) == 0:
-                                logger.debug('EMPTY RESPONSE')
-                                continue
-                            logger.debug('response %s', response)
-                            response = [(k, response[k]) for k in response]
-                            logger.debug('response %s', response)
-                            d = parse_signature_tlv(response)
-                            logger.debug('d %s', d)
-                            for k in d:
-                                if k == 'service_type':
-                                    s_data['type'] = d[k].upper()
-                                elif k == 'sid':
-                                    s_data['iid'] = d[k]
-                                else:
-                                    c_data[k] = d[k]
+                            try:
+                                response = self.session.request(characteristic, iid, HapBleOpCodes.CHAR_SIG_READ)
+                                logger.debug('response %s', response)
+                            except:
+                                break
+                        #     if not response or len(response) == 0:
+                        #         logger.debug('EMPTY RESPONSE')
+                        #         continue
+                        #     logger.debug('response %s', response)
+                        #     response = [(k, response[k]) for k in response]
+                        #     logger.debug('response %s', response)
+                        #     d = parse_signature_tlv(response)
+                        #     logger.debug('d %s', d)
+                        #     for k in d:
+                        #         if k == 'service_type':
+                        #             s_data['type'] = d[k].upper()
+                        #         elif k == 'sid':
+                        #             s_data['iid'] = d[k]
+                        #         else:
+                        #             c_data[k] = d[k]
+                        if c_data['iid']:
+                            s_data['characteristics'].append(c_data)
 
-            return None
+                if s_data['iid']:
+                    a_data['services'].append(s_data)
+
+            logger.debug('data: %s', resolved_data)
+
+            return resolved_data
 
     def list_pairings(self):
         # TODO implementation still missing
