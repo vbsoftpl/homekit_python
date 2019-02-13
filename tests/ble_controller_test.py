@@ -35,6 +35,7 @@ from homekit.model import mixin as model_mixin
 from homekit import exceptions
 from homekit.controller.ble_impl.manufacturer_data import parse_manufacturer_specific
 from homekit.model.status_flags import BleStatusFlags
+from tests.helpers import pin_returner
 
 
 class DeviceManager:
@@ -616,7 +617,7 @@ class TestBLEController(unittest.TestCase):
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
             self.assertIsNone(a.services[0].characteristics[0].value)
             self.assertRaises(exceptions.AlreadyPairedError, c.identify_ble, '00:00:00:00:00')
 
@@ -638,7 +639,7 @@ class TestBLEController(unittest.TestCase):
 
         with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m:
             m.return_value = manager
-            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+            c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
 
         self.assertEqual(c.pairings['test-pairing'].pairing_data['Connection'], 'BLE')
 
@@ -662,7 +663,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.device.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
                 self.assertEqual(len(device.peers), 1)
 
@@ -692,7 +693,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 accessories = c.pairings['test-pairing'].list_accessories_and_characteristics()
 
         self.assertEqual(accessories, [
@@ -840,7 +841,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
                 result = c.pairings['test-pairing'].get_characteristics([
                     (1, 4),
@@ -872,7 +873,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
                 result = c.pairings['test-pairing'].get_characteristics([
                     (2, 1),
@@ -905,7 +906,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
 
                 # Establishes a secure session
@@ -941,7 +942,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
 
                 result = c.pairings['test-pairing'].put_characteristics([
@@ -976,7 +977,7 @@ class TestBLEController(unittest.TestCase):
             with mock.patch('homekit.controller.ble_impl.DeviceManager') as m2:
                 m1.return_value = manager
                 m2.return_value = manager
-                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', '111-11-111')
+                c.perform_pairing_ble('test-pairing', '00:00:00:00:00', pin_returner('111-11-111'))
                 c.pairings['test-pairing'].list_accessories_and_characteristics()
 
                 self.assertIsNone(a.services[0].characteristics[0].value)

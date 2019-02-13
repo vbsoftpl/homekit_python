@@ -28,6 +28,7 @@ from homekit.model.services import LightBulbService
 from homekit.controller.ble_impl import BlePairing
 from homekit.controller.ip_implementation import IpPairing
 from homekit.model import mixin as model_mixin
+from tests.helpers import pin_returner
 
 
 class T(threading.Thread):
@@ -126,7 +127,7 @@ class TestControllerIpUnpaired(unittest.TestCase):
 
     def test_02_pair(self):
         """Try to pair the test accessory"""
-        self.controller.perform_pairing('alias', '12:34:56:00:01:0B', '010-22-020')
+        self.controller.perform_pairing('alias', '12:34:56:00:01:0B', pin_returner('010-22-020'))
         pairings = self.controller.get_pairings()
         self.controller.save_data(self.controller_file.name)
         self.assertIn('alias', pairings)
@@ -134,12 +135,12 @@ class TestControllerIpUnpaired(unittest.TestCase):
     def test_02_pair_accessory_not_found(self):
         """"""
         self.assertRaises(AccessoryNotFoundError, self.controller.perform_pairing, 'alias1', '12:34:56:00:01:1B',
-                          '010-22-020')
+                          pin_returner('010-22-020'))
 
     def test_02_pair_wrong_pin(self):
         """"""
         self.assertRaises(UnavailableError, self.controller.perform_pairing, 'alias2', '12:34:56:00:01:0B',
-                          '010-22-021')
+                          pin_returner('010-22-021'))
 
 
 class TestControllerIpPaired(unittest.TestCase):
@@ -222,7 +223,7 @@ class TestControllerIpPaired(unittest.TestCase):
         """Try to pair the test accessory"""
         self.controller.load_data(self.controller_file.name)
         self.assertRaises(AlreadyPairedError, self.controller.perform_pairing, 'alias', '12:34:56:00:01:0B',
-                          '010-22-020')
+                          pin_returner('010-22-020'))
 
     def test_02_paired_identify_wrong_method(self):
         """Try to identify an already paired accessory via the controller's method for unpaired accessories."""
